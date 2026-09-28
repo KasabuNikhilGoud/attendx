@@ -1,0 +1,53 @@
+# ===== Root =====
+.DS_Store
+Thumbs.db
+
+# Env - never commit real secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ===== Web (Next.js) =====
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/dist/
+web/*.log
+web/.vercel/
+web/.env.local
+web/.env.*.local
+
+# General node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ===== Flutter (app/) - supplements app/.gitignore =====
+app/build/
+app/.dart_tool/
+app/.flutter-plugins-dependencies
+app/.packages
+app/.pub-cache/
+app/coverage/
+app/android/local.properties
+*.tsbuildinfo
+
+# ===== Supabase =====
+supabase/.branches/
+supabase/.temp/
+
+# ===== IDE =====
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ===== OS =====
+*.log
