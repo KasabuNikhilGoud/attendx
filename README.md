@@ -1,52 +1,64 @@
-# AttendX — ERP Attendance Management System
+# AttendX — AI-Native ERP Attendance System
 
-A full-stack ERP system for managing attendance across institutions.
+One platform for attendance, roles, reports, and offline-first mobile. Single source of truth in PostgreSQL (Supabase), AI-ready from day one.
 
-## Monorepo Structure
+## Features
 
+- Role dashboards: Student, Faculty, HOD, Admin
+- Subject/session attendance with percentages and reports
+- Department, class, and subject management
+- Offline-first Flutter app with auto sync (queue + conflict-safe)
+- AI-ready: Copilot, insights, and workflow hooks (attendance < 75% → notify)
+- Secure by default: auth, role + tenant checks, audit logs
+
+## Architecture
+
+```text
+Flutter (offline) + Next.js web
+        ↓ HTTPS
+Supabase Auth → RLS → PostgreSQL
+        ↓
+Realtime + Edge Functions (email) + AI tools
 ```
+
+See `docs/ai-native-erp.md` for vision and `docs/learning-roadmap.md` for build order.
+
+## Repo
+
+```text
 attendx/
-├── app/          → Flutter mobile app (Android + iOS)
-├── web/          → Next.js 14 web dashboard (Vercel)
-└── supabase/     → Database schema + Edge Functions (email)
+├── app/       Flutter mobile app
+├── web/       Next.js 14 dashboard
+├── supabase/  SQL migrations + edge functions
+└── docs/      Vision + learning roadmap
 ```
 
-## Roles
-- **Student** — view own attendance, percentage, subject-wise breakdown
-- **Faculty** — mark attendance per subject/session, view class reports
-- **HOD** — department-level reports, approve/flag sessions
-- **Admin** — full CRUD: users, departments, classes, subjects, enrollments
+## Stack
 
-## Tech Stack
 | Layer | Tech |
 |---|---|
-| Mobile | Flutter 3 + Supabase Flutter |
-| Web | Next.js 14 (App Router) + Tailwind CSS |
-| Database | Supabase (PostgreSQL + RLS) |
-| Auth | Supabase Auth (role-based) |
-| Email | Supabase Edge Functions + Resend |
-| Web Deploy | Vercel |
-| App Deploy | Google Play + App Store |
+| Mobile | Flutter 3, Supabase Flutter |
+| Web | Next.js 14, Tailwind |
+| Data | Supabase (PostgreSQL + RLS) |
+| Auth | Supabase Auth, role-based |
+| Jobs/Email | Edge Functions + Resend |
 
-## Getting Started
+## Quickstart
 
-### 1. Supabase Setup
-- Create project at supabase.com
-- Run `supabase/migrations/` SQL files in order
-- Copy your `SUPABASE_URL` and `SUPABASE_ANON_KEY`
-
-### 2. Flutter App
 ```bash
+# 1. Supabase: create project, run supabase/migrations/*.sql in order
+
+# 2. Web
+cd web
+npm install
+cp .env.local.example .env.local  # fill keys
+npm run dev
+
+# 3. App
 cd app
 flutter pub get
-# add your supabase keys in lib/core/constants/app_constants.dart
+# set keys in lib/core/constants/app_constants.dart
 flutter run
 ```
 
-### 3. Next.js Web
-```bash
-cd web
-npm install
-# add keys in .env.local
-npm run dev
-```
+Demo logins: `admin@attendx.com` / `hod@` / `faculty@` / `student@` + role123 (e.g. `admin123`).
