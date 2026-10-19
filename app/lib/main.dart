@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/app_router.dart';
+import 'core/services/supabase_service.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Supabase.initialize(
-    url: AppConstants.supabaseUrl,
-    anonKey: AppConstants.supabaseAnonKey, // ignore: deprecated_member_use
-  );
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -20,7 +16,11 @@ void main() async {
     ),
   );
 
-  runApp(const AttendXApp());
+  // Phase 1: connect real backend when .env is configured.
+  // Falls back to offline demo mode when Supabase isn't set up yet.
+  await SupabaseService.ensureInitialized();
+
+  runApp(const ProviderScope(child: AttendXApp()));
 }
 
 class AttendXApp extends StatelessWidget {

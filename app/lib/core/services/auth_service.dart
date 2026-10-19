@@ -1,9 +1,10 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_constants.dart';
 
+/// Hardcoded demo authentication for the offline showcase build.
+///
+/// The app runs without any backend/database: all users, roles and data are
+/// mock/hardcoded so the full UI can be reviewed end-to-end.
 class AuthService {
-  static final _supabase = Supabase.instance.client;
-
   static bool _demoMode = false;
   static Map<String, dynamic>? _demoProfile;
 
@@ -32,64 +33,86 @@ class AuthService {
     },
   };
 
-  static User? get currentUser => _demoMode ? null : _supabase.auth.currentUser;
+  /// True when a demo (mock data) session is active.
+  static bool get isLoggedIn => _demoMode;
 
-  static Future<Map<String, dynamic>> login(String email, String password) async {
-    if (_demoUsers.containsKey(email.toLowerCase())) {
-      final user = _demoUsers[email.toLowerCase()]!;
-      if (user['password'] == password) {
-        _demoMode = true;
-        _demoProfile = {
-          'id': 'demo_${user['role']}',
-          'email': email.toLowerCase(),
-          'full_name': user['full_name'],
-          'role': user['role'],
-        };
-        return {'success': true, 'role': user['role']};
-      }
-    }
+  /// Role of the active demo user, or null when not logged in.
+  static String? get demoRole => _demoProfile?['role'] as String?;
 
-    try {
-      final res = await _supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-      if (res.user == null) return {'success': false, 'message': 'Login failed'};
-      final role = await getUserRole(res.user!.id);
-      return {'success': true, 'role': role};
-    } on AuthException catch (e) {
-      return {'success': false, 'message': e.message};
-    } catch (e) {
-      return {'success': false, 'message': 'Something went wrong'};
+  /// Signs in against the hardcoded demo accounts.
+  static Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+  ) async {
+    final user = _demoUsers[email.toLowerCase()];
+    if (user != null && user['password'] == password) {
+      _demoMode = true;
+      _demoProfile = {
+        'id': 'demo_${user['role']}',
+        'email': email.toLowerCase(),
+        'full_name': user['full_name'],
+        'role': user['role'],
+      };
+      return {'success': true, 'role': user['role']};
     }
+    return {
+      'success': false,
+      'message': 'Invalid credentials. Use one of the demo accounts.',
+    };
   }
 
   static Future<void> logout() async {
     _demoMode = false;
     _demoProfile = null;
-    await _supabase.auth.signOut();
   }
 
-  static Future<String?> getUserRole(String userId) async {
-    final data = await _supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-    return data['role'] as String?;
+  /// Creates an in-memory demo account and signs in.
+  static Future<Map<String, dynamic>> signUp({
+    required String fullName,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    final key = email.toLowerCase();
+    if (_demoUsers.containsKey(key)) {
+      return {
+        'success': false,
+        'message': 'An account with this email already exists.',
+      };
+    }
+    _demoUsers[key] = {
+      'role': role,
+      'full_name': fullName,
+      'password': password,
+    };
+    _demoMode = true;
+    _demoProfile = {
+      'id': 'demo_$role',
+      'email': key,
+      'full_name': fullName,
+      'role': role,
+    };
+    return {'success': true, 'role': role};
   }
 
+  /// Route for a role's home dashboard.
+  static String routeForRole(String? role) {
+    switch (role) {
+      case UserRole.student:
+        return '/student';
+      case UserRole.faculty:
+        return '/faculty';
+      case UserRole.hod:
+        return '/hod';
+      case UserRole.admin:
+        return '/admin';
+      default:
+        return '/login';
+    }
+  }
+
+  /// Returns the active demo profile, or null when logged out.
   static Future<Map<String, dynamic>?> getProfile() async {
-    if (_demoMode) return _demoProfile;
-    final user = currentUser;
-    if (user == null) return null;
-    return await _supabase
-        .from('profiles')
-        .select()
-        .eq('id', user.id)
-        .single();
+    return _demoProfile;
   }
-
-  static Stream<AuthState> get authStateChanges =>
-      _supabase.auth.onAuthStateChange;
 }

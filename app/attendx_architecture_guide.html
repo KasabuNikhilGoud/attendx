@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AttendX - Complete Codebase Audit, Architecture & Flow Diagrams</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Mermaid.js for Interactive Diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      themeVariables: {
+        primaryColor: '#FEE2E2',
+        primaryTextColor: '#991B1B',
+        primaryBorderColor: '#EF4444',
+        lineColor: '#64748B',
+        secondaryColor: '#F1F5F9',
+        tertiaryColor: '#FFFFFF',
+        fontFamily: 'Inter, sans-serif'
+      },
+      flowchart: { curve: 'basis', htmlLabels: true },
+      sequence: { actorMargin: 50, mirrorActors: false }
+    });
+  </script>
+
+  <style>
+    :root {
+      --primary: #E53935;
+      --primary-hover: #D32F2F;
+      --primary-light: #FEF2F2;
+      --primary-border: #FECACA;
+      --text-main: #09090B;
+      --text-muted: #64748B;
+      --text-light: #94A3B8;
+      --bg-page: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --border-color: #E2E8F0;
+      --border-subtle: #F1F5F9;
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
+      --info: #3B82F6;
+      --info-bg: #EFF6FF;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 290px;
+      background: #FFFFFF;
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 16px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .brand-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      background: var(--primary-light);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--primary-border);
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 18px;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.4px;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--primary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-group-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-light);
+      font-weight: 700;
+      padding: 8px 12px 4px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #334155;
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+    }
+
+    .nav-link:hover {
+      background: #F1F5F9;
+      color: var(--primary);
+    }
+
+    .nav-link.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .nav-link svg {
+      width: 17px;
+      height: 17px;
+      opacity: 0.7;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 40px 48px 80px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* Header Banner */
+    .hero-banner {
+      background: linear-gradient(135deg, #FFFFFF 0%, #FFF5F5 100%);
+      border: 1px solid var(--primary-border);
+      border-radius: var(--radius-lg);
+      padding: 36px 40px;
+      margin-bottom: 40px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-banner::after {
+      content: '';
+      position: absolute;
+      right: -20px;
+      top: -20px;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(229,57,53,0.08) 0%, rgba(229,57,53,0) 70%);
+      border-radius: 50%;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 100px;
+      margin-bottom: 16px;
+    }
+
+    .badge-red {
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+    }
+
+    .badge-gray {
+      background: #F1F5F9;
+      color: #475569;
+      border: 1px solid var(--border-color);
+    }
+
+    .badge-green {
+      background: var(--success-bg);
+      color: #059669;
+      border: 1px solid #A7F3D0;
+    }
+
+    .badge-blue {
+      background: var(--info-bg);
+      color: #2563EB;
+      border: 1px solid #BFDBFE;
+    }
+
+    .badge-amber {
+      background: var(--warning-bg);
+      color: #D97706;
+      border: 1px solid #FDE68A;
+    }
+
+    h1.hero-title {
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.9px;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+
+    p.hero-desc {
+      font-size: 15.5px;
+      color: var(--text-muted);
+      max-width: 840px;
+      line-height: 1.6;
+    }
+
+    /* Executive Metrics Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin: 28px 0 40px;
+    }
+
+    .metric-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .metric-val {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -1px;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .metric-val.red { color: var(--primary); }
+    .metric-val.blue { color: var(--info); }
+    .metric-val.green { color: var(--success); }
+
+    .metric-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Section Styling */
+    section.doc-section {
+      margin-bottom: 56px;
+      scroll-margin-top: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 14px;
+      margin-bottom: 24px;
+    }
+
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      background: var(--primary-light);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    h2.section-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+    }
+
+    p.section-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Cards & Containers */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    /* Diagram Containers */
+    .diagram-viewport {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      overflow-x: auto;
+      margin: 16px 0;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      display: flex;
+      justify-content: center;
+    }
+
+    .diagram-viewport .mermaid {
+      width: 100%;
+      text-align: center;
+    }
+
+    /* File Map Tables */
+    .table-container {
+      overflow-x: auto;
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin: 16px 0;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    table.data-table th {
+      background: #F8FAFC;
+      color: #475569;
+      font-weight: 600;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.6px;
+    }
+
+    table.data-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: #334155;
+      vertical-align: top;
+    }
+
+    table.data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.data-table tr:hover td {
+      background-color: #FAFAFA;
+    }
+
+    .file-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .code-badge {
+      font-family: 'JetBrains Mono', monospace;
+      background: #F1F5F9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      color: #1E293B;
+      border: 1px solid #E2E8F0;
+    }
+
+    /* Page Detailed Walkthrough Cards */
+    .page-walkthrough-card {
+      border: 1px solid var(--border-color);
+      background: #FFFFFF;
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .page-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .page-name-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .page-step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13.5px;
+      color: #334155;
+    }
+
+    .feature-list li::before {
+      content: '✓';
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    /* Grid of 4 Roles */
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .role-box {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      background: #FFFFFF;
+      box-shadow: var(--shadow-sm);
+      border-top: 4px solid var(--primary);
+    }
+
+    .role-box.student { border-top-color: #3B82F6; }
+    .role-box.faculty { border-top-color: #10B981; }
+    .role-box.hod { border-top-color: #F59E0B; }
+    .role-box.admin { border-top-color: #E53935; }
+
+    .role-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .role-account {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: #F8FAFC;
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin: 8px 0 12px;
+      border: 1px dashed var(--border-color);
+    }
+
+    /* Code Block styling */
+    pre.code-snippet {
+      background: #0F172A;
+      color: #F8FAFC;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      overflow-x: auto;
+      line-height: 1.5;
+      margin: 12px 0;
+    }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      line-height: 1.5;
+      margin: 16px 0;
+      border-left: 4px solid;
+    }
+
+    .callout-info {
+      background: var(--info-bg);
+      border-color: var(--info);
+      color: #1E3A8A;
+    }
+
+    .callout-warning {
+      background: var(--warning-bg);
+      border-color: var(--warning);
+      color: #78350F;
+    }
+
+    .callout-success {
+      background: var(--success-bg);
+      border-color: var(--success);
+      color: #064E3B;
+    }
+
+    /* Footer */
+    footer.doc-footer {
+      border-top: 1px solid var(--border-color);
+      padding-top: 30px;
+      margin-top: 60px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    @media (max-width: 900px) {
+      .app-container { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: relative; }
+      .main-content { padding: 24px 20px; }
+      .hero-banner { padding: 24px; }
+      h1.hero-title { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  
+  <!-- Left Sticky Navigation -->
+  <aside class="sidebar">
+    <div class="brand-box">
+      <div class="brand-icon">A</div>
+      <div>
+        <div class="brand-title">AttendX</div>
+        <div class="brand-subtitle">Architectural Blueprint</div>
+      </div>
+    </div>
+
+    <nav>
+      <div class="nav-group-title">Overview</div>
+      <a href="#executive-summary" class="nav-link active">Executive Summary</a>
+      <a href="#system-metrics" class="nav-link">Project Vital Statistics</a>
+
+      <div class="nav-group-title">Visual Diagrams</div>
+      <a href="#architecture-diagram" class="nav-link">High-Level Architecture</a>
+      <a href="#flow-diagram" class="nav-link">End-to-End App Flow</a>
+      <a href="#auth-role-diagram" class="nav-link">Auth & RBAC Routing Flow</a>
+      <a href="#uml-class-diagram" class="nav-link">UML Class Diagram</a>
+      <a href="#uml-sequence-diagram" class="nav-link">UML Sequence Diagrams</a>
+
+      <div class="nav-group-title">Project Map & Codebase</div>
+      <a href="#complete-file-map" class="nav-link">File-by-File Blueprint (26 Files)</a>
+      <a href="#design-system" class="nav-link">Apple & Shadcn Design System</a>
+
+      <div class="nav-group-title">Detailed Page Flows</div>
+      <a href="#page-walkthrough" class="nav-link">Start-to-End Pages (All 8 Roles/Views)</a>
+      <a href="#functions-catalog" class="nav-link">Functions & Modules Catalog</a>
+    </nav>
+  </aside>
+
+  <!-- Right Main Content Canvas -->
+  <main class="main-content">
+
+    <!-- Hero Banner -->
+    <div class="hero-banner" id="executive-summary">
+      <div class="badge-pill badge-red">Flutter 3.x ERP Application</div>
+      <div class="badge-pill badge-gray">GoRouter 14.0</div>
+      <div class="badge-pill badge-green">Production Showcase Build</div>
+      
+      <h1 class="hero-title">AttendX — Complete Codebase Audit, Architecture & Technical Blueprints</h1>
+      <p class="hero-desc">
+        A complete, forensic architectural breakdown of the AttendX ERP Attendance Management System. This document maps all <strong>26 project files</strong>, <strong>8 core route screens</strong>, <strong>4 role-based dashboards</strong>, data structures, state models, UI component lifecycles, and interactive UML & flow diagrams.
+      </p>
+    </div>
+
+    <!-- Vital Stats Grid -->
+    <div class="metrics-grid" id="system-metrics">
+      <div class="metric-card">
+        <div class="metric-val red">26</div>
+        <div class="metric-label">Total Dart Files (23 Lib + 3 Test)</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val blue">8</div>
+        <div class="metric-label">Registered GoRouter Routes</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val green">4</div>
+        <div class="metric-label">Distinct User Roles (RBAC)</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val">100%</div>
+        <div class="metric-label">Offline Showcase Mode Stability</div>
+      </div>
+    </div>
+
+    <!-- SECTION 1: ARCHITECTURE DIAGRAM -->
+    <section class="doc-section" id="architecture-diagram">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">🏛️</div>
+          <div>
+            <h2 class="section-title">1. High-Level System Architecture</h2>
+            <p class="section-subtitle">Multi-tier clean architecture separating UI, routing, theme, services, and domain mock models</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Layered Architecture Stack</div>
+        <div class="card-desc">
+          AttendX implements a clean, layered architectural pattern designed for high responsiveness, zero external latency in offline demonstration mode, and Apple-grade fluid user interactions.
+        </div>
+        
+        <div class="diagram-viewport">
+          <pre class="mermaid">
+flowchart TB
+    subgraph PresentationLayer ["1. Presentation Layer (UI & Features)"]
+        direction TB
+        subgraph GuestScreens ["Guest Screens"]
+            Splash["SplashScreen\n(Cold Start Animation, 1.4s Timer)"]
+            Onboard["OnboardingScreen\n(4-Step Feature Carousel)"]
+            Login["LoginScreen\n(Role Demo Selector, Form Validation)"]
+            Signup["SignUpScreen\n(In-Memory Account Creator)"]
+        end
+        subgraph Dashboards ["Role-Based Dashboards"]
+            StudentDash["StudentDashboard\n(Home, View History, Info Tabs + Subject Modal)"]
+            FacultyDash["FacultyDashboard\n(Overview, Mark Attendance, Reports Subviews)"]
+            HodDash["HodDashboard\n(Segmented: Dash, Faculty, Reports + Info Tab)"]
+            AdminDash["AdminDashboard\n(Stats Tiles, 6 Manage Sheets, Config Info)"]
+        end
+    end
+
+    subgraph CoreDesign ["2. Core Design System & Widgets"]
+        direction LR
+        AppTheme["AppTheme\n(Inter Font, Material3 Light Seed)"]
+        AppColors["AppColors\n(Zinc Palette + Red #E53935)"]
+        AppCurves["AppCurves\n(Apple Spring & EaseOut Curves)"]
+        Widgets["ShadcnButton · ShadcnCard\nShadcnBadge · FrostedNavBar\nApplePressable · AnimatedMetricCounter"]
+    end
+
+    subgraph CoreServices ["3. Core Services & Routing"]
+        direction LR
+        AppRouter["AppRouter (GoRouter 14)\n(Guest vs Auth Redirection, Apple Page Transitions)"]
+        AuthService["AuthService\n(Hardcoded Demo Session, Login, SignUp, Logout)"]
+        AppConstants["AppConstants & UserRole\n(student, faculty, hod, admin)"]
+    end
+
+    subgraph DomainData ["4. Domain Data & Mock State Layer"]
+        direction LR
+        StudentMock["StudentMockData\n(Rahul Student, 5 Subjects, 15 Records)"]
+        FacultyMock["FacultyMockData\n(Dr. Priya Patel, CS201/CS205, Rosters)"]
+        HodMock["HodMockData\n(Dept Computer Science, Faculty, Subjects)"]
+        AdminMock["AdminMockData\n(8 Students, 4 Faculty, 5 Subjects, 3 Classes, 3 Depts)"]
+    end
+
+    PresentationLayer --> CoreDesign
+    PresentationLayer --> CoreServices
+    PresentationLayer --> DomainData
+    CoreServices --> DomainData
+          </pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: END TO END FLOW DIAGRAM -->
+    <section class="doc-section" id="flow-diagram">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">🔄</div>
+          <div>
+            <h2 class="section-title">2. End-to-End Navigation & Execution Flow</h2>
+            <p class="section-subtitle">Visual traversal from main() execution through splash, onboarding, authentication and role routing</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Complete User Journey Flowchart</div>
+        <div class="card-desc">
+          Below is the chronological flow diagram of the app from application boot to role dashboard execution and eventual logout.
+        </div>
+
+        <div class="diagram-viewport">
+          <pre class="mermaid">
+flowchart TD
+    Start([App Launch: main]) --> Init[WidgetsFlutterBinding & SystemChrome Overlay]
+    Init --> RunApp[AttendXApp with MaterialApp.router]
+    RunApp --> RouterInit[AppRouter reads initialLocation: /splash]
+
+    RouterInit --> SplashView[SplashScreen Rendered]
+    SplashView --> Anim[Spring Bounce & Progress Bar: 1400ms]
+    Anim --> CheckFirstLaunch{Cold Start Finished?}
+    CheckFirstLaunch -->|Yes| GoOnboarding[Navigate: /onboarding]
+
+    GoOnboarding --> OnboardView[OnboardingScreen: 4 Slides]
+    OnboardView -->|User swipes or taps Next / Skip| GoLogin[Navigate: /login]
+
+    GoLogin --> LoginView[LoginScreen: Apple-style frosted card]
+    LoginView --> ChooseMode{User Action}
+    
+    ChooseMode -->|Tap Demo Account Pill| FillPill[Auto-fill: Admin / HOD / Faculty / Student]
+    ChooseMode -->|Tap 'Create account'| GoSignup[Navigate: /signup]
+    ChooseMode -->|Submit Login Form| CallAuth[AuthService.login email, pass]
+
+    GoSignup --> SignupView[SignUpScreen: Fill Name, Email, Password, Role]
+    SignupView -->|Submit Form| CallSignUp[AuthService.signUp]
+    CallSignUp -->|Success| SetSession[Set _demoMode=true, _demoProfile]
+
+    FillPill --> CallAuth
+    CallAuth -->|Invalid| ShowErr[Display Error Message Alert]
+    CallAuth -->|Valid| SetSession
+
+    SetSession --> RoleBranch{Resolve User Role}
+    RoleBranch -->|role == 'student'| RouteStudent["Navigate: /student\n(StudentDashboard)"]
+    RoleBranch -->|role == 'faculty'| RouteFaculty["Navigate: /faculty\n(FacultyDashboard)"]
+    RoleBranch -->|role == 'hod'| RouteHod["Navigate: /hod\n(HodDashboard)"]
+    RoleBranch -->|role == 'admin'| RouteAdmin["Navigate: /admin\n(AdminDashboard)"]
+
+    RouteStudent --> StudActions[Student Views Attendance Gauge, Details Sheet, History]
+    RouteFaculty --> FacActions[Faculty Marks Class Attendance or Views Reports]
+    RouteHod --> HodActions[HOD Inspects Dept Performance, Faculty Records & Defaulters]
+    RouteAdmin --> AdmActions[Admin Manages Users, Depts, Classes, Subjects & SMTP]
+
+    StudActions --> LogoutTrigger[Tap Logout Icon Button]
+    FacActions --> LogoutTrigger
+    HodActions --> LogoutTrigger
+    AdmActions --> LogoutTrigger
+
+    LogoutTrigger --> ConfirmDialog{Confirm Sign Out?}
+    ConfirmDialog -->|No| Dismiss[Return to Current Dashboard]
+    ConfirmDialog -->|Yes| ClearAuth[AuthService.logout -> _demoMode=false]
+    ClearAuth --> RedirectLogin[Redirect: /login]
+          </pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: AUTH & RBAC ROUTING FLOW -->
+    <section class="doc-section" id="auth-role-diagram">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">🛡️</div>
+          <div>
+            <h2 class="section-title">3. Authentication & RBAC Guard Flow</h2>
+            <p class="section-subtitle">How GoRouter redirects enforce guest route constraints and role-based access</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">GoRouter Route Guard Logic</div>
+        <div class="card-desc">
+          Every route change triggers the declarative redirect logic in <span class="file-name">app_router.dart</span>.
+        </div>
+
+        <div class="diagram-viewport">
+          <pre class="mermaid">
+flowchart LR
+    Request[Route Request: state.matchedLocation] --> GuardCheck{Is User Logged In?\nAuthService.isLoggedIn}
+    
+    GuardCheck -->|NO| CheckGuest{Is requested path in _guestRoutes?\n/splash, /onboarding, /login, /signup}
+    CheckGuest -->|YES| AllowGuest[Allow Navigation to Guest Screen]
+    CheckGuest -->|NO| ForceSplash[Redirect to: /splash]
+
+    GuardCheck -->|YES| CheckIfGuest{Is requested path in _guestRoutes?}
+    CheckIfGuest -->|YES| RedirectToHome["Redirect to Role Home:\nAuthService.routeForRole(demoRole)"]
+    CheckIfGuest -->|NO| AllowAuth[Allow Navigation to Protected Dashboard]
+          </pre>
+        </div>
+
+        <div class="roles-grid">
+          <div class="role-box student">
+            <div class="role-title" style="color: #3B82F6;">Student Role</div>
+            <div class="role-account">student@attendx.com / student123</div>
+            <p style="font-size: 13px; color: #475569;">Target: <strong>/student</strong> (StudentDashboard)</p>
+            <p style="font-size: 12.5px; color: #64748B; margin-top: 6px;">Visual circular gauge, 5 subject attendance progress bars, class calculation simulator to reach 75%, and full timeline log.</p>
+          </div>
+
+          <div class="role-box faculty">
+            <div class="role-title" style="color: #10B981;">Faculty Role</div>
+            <div class="role-account">faculty@attendx.com / faculty123</div>
+            <p style="font-size: 13px; color: #475569;">Target: <strong>/faculty</strong> (FacultyDashboard)</p>
+            <p style="font-size: 12.5px; color: #64748B; margin-top: 6px;">Multi-student attendance marking matrix with instant Present/Absent/Late toggles, bulk 'Mark All Present', and report exports.</p>
+          </div>
+
+          <div class="role-box hod">
+            <div class="role-title" style="color: #F59E0B;">HOD Role</div>
+            <div class="role-account">hod@attendx.com / hod123</div>
+            <p style="font-size: 13px; color: #475569;">Target: <strong>/hod</strong> (HodDashboard)</p>
+            <p style="font-size: 12.5px; color: #64748B; margin-top: 6px;">Department-wide aggregates, subject performance distributions, faculty record submission tracking, and at-risk student monitoring.</p>
+          </div>
+
+          <div class="role-box admin">
+            <div class="role-title" style="color: #E53935;">Admin Role</div>
+            <div class="role-account">admin@attendx.com / admin123</div>
+            <p style="font-size: 13px; color: #475569;">Target: <strong>/admin</strong> (AdminDashboard)</p>
+            <p style="font-size: 12.5px; color: #64748B; margin-top: 6px;">Total college ERP control: 6 management drawers for Users, Departments, Classes, Subjects, Enrollments, and SMTP Email configuration.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: UML CLASS DIAGRAM -->
+    <section class="doc-section" id="uml-class-diagram">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">📐</div>
+          <div>
+            <h2 class="section-title">4. UML Class Diagram</h2>
+            <p class="section-subtitle">Entity relationship, component hierarchy, models, and interfaces across all modules</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Core & Domain Class Model</div>
+        <div class="card-desc">
+          The diagram below models the relationships between core widgets, auth services, and the 4 role domain entities.
+        </div>
+
+        <div class="diagram-viewport">
+          <pre class="mermaid">
+classDiagram
+    class AuthService {
+        -_demoMode : bool
+        -_demoProfile : Map~String, dynamic~?
+        -_demoUsers : Map~String, Map~
+        +isDemoMode : bool$
+        +isLoggedIn : bool$
+        +demoRole : String?$
+        +login(email, pass) Future~Map~
+        +logout() Future~void~
+        +signUp(fullName, email, pass, role) Future~Map~
+        +routeForRole(role) String$
+        +getProfile() Future~Map~
+    }
+
+    class AppRouter {
+        -_guestRoutes : Set~String~$
+        -_buildApplePage(context, state, child) Page$
+        +router : GoRouter$
+    }
+
+    class AppColors {
+        +primaryRed : Color$
+        +greenSuccess : Color$
+        +warning : Color$
+        +zinc950 : Color$
+        +surface : Color$
+    }
+
+    class ApplePressable {
+        +child : Widget
+        +onTap : VoidCallback?
+        +scaleDown : double
+        +enableHaptics : bool
+        +createState() _ApplePressableState
+    }
+
+    class ShadcnButton {
+        +text : String
+        +onPressed : VoidCallback?
+        +variant : ShadcnButtonVariant
+        +size : ShadcnButtonSize
+        +isLoading : bool
+        +build(context) Widget
+    }
+
+    class ShadcnCard {
+        +child : Widget
+        +title : String?
+        +description : String?
+        +trailing : Widget?
+        +footer : Widget?
+        +onTap : VoidCallback?
+        +build(context) Widget
+    }
+
+    class StudentSubject {
+        +name : String
+        +code : String
+        +faculty : String
+        +classesHeld : int
+        +classesAttended : int
+        +percent : double
+    }
+
+    class StudentAttendanceRecord {
+        +subjectCode : String
+        +date : String
+        +time : String
+        +status : AttendanceStatus
+    }
+
+    class FacultySubject {
+        +id : String
+        +name : String
+        +code : String
+        +section : String
+        +sessions : int
+        +students : List~StudentAttendance~
+        +averagePercent : int
+        +percentFor(student) int
+    }
+
+    class StudentAttendance {
+        +rollNo : String
+        +name : String
+        +presentCount : int
+        +lateCount : int
+        +attendedCount : int
+    }
+
+    class HodFaculty {
+        +name : String
+        +email : String
+        +department : String
+        +attendance : double
+        +records : int
+    }
+
+    class AdminStudent {
+        +id : String
+        +name : String
+        +rollNo : String
+        +email : String
+        +department : String
+    }
+
+    class AdminDepartment {
+        +id : String
+        +name : String
+        +code : String
+        +hod : String
+        +facultyCount : int
+        +studentCount : int
+    }
+
+    AppRouter --> AuthService : calls isLoggedIn & routeForRole
+    FacultySubject "1" *-- "many" StudentAttendance : aggregates
+    ShadcnButton ..> ApplePressable : wraps for tactile press
+    ShadcnCard ..> ApplePressable : optional tap wrapper
+          </pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: UML SEQUENCE DIAGRAMS -->
+    <section class="doc-section" id="uml-sequence-diagram">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">⏱️</div>
+          <div>
+            <h2 class="section-title">5. UML Sequence Diagrams</h2>
+            <p class="section-subtitle">Real-time interaction sequences during key workflows</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sequence 1: Login & Role Routing -->
+      <div class="card">
+        <div class="card-title">Sequence A: Startup, Login & Protected Role Redirection</div>
+        <div class="card-desc">Shows how user credentials trigger in-memory verification and GoRouter transitions.</div>
+        <div class="diagram-viewport">
+          <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as LoginScreen
+    participant Auth as AuthService
+    participant Router as AppRouter (GoRouter)
+    participant Dash as StudentDashboard / AdminDashboard
+
+    User->>UI: Selects 'Student' demo chip & taps 'Sign In'
+    UI->>UI: _formKey.currentState.validate()
+    UI->>Auth: login("student@attendx.com", "student123")
+    Auth->>Auth: Check _demoUsers lookup
+    Auth->>Auth: Set _demoMode = true, _demoProfile = {...}
+    Auth-->>UI: Return {success: true, role: 'student'}
+    UI->>Router: context.go('/student')
+    Router->>Auth: AuthService.isLoggedIn (Returns true)
+    Router->>Dash: CustomTransitionPage build with Slide & Fade (320ms)
+    Dash-->>User: Renders personalized Student Dashboard
+          </pre>
+        </div>
+      </div>
+
+      <!-- Sequence 2: Faculty Attendance Marking -->
+      <div class="card">
+        <div class="card-title">Sequence B: Faculty Attendance Marking & Submission Workflow</div>
+        <div class="card-desc">Step-by-step state propagation during faculty roll-call sessions.</div>
+        <div class="diagram-viewport">
+          <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Faculty as Faculty Member
+    participant Screen as FacultyDashboard
+    participant State as _FacultyDashboardState
+    participant Mock as FacultyMockData
+
+    Faculty->>Screen: Taps 'Mark Attendance' on CS201 card
+    Screen->>State: _openMark(subject: CS201)
+    State->>State: _subView = _SubView.mark
+    State->>State: Populate _marks with default Present for 8 students
+    State-->>Screen: Re-renders body to _buildMarkView()
+    Faculty->>Screen: Taps 'Absent' on CS2022-004 (Ananya Iyer)
+    Screen->>State: _marks['CS2022-004'] = AttendanceStatus.absent
+    Faculty->>Screen: Taps 'Submit Attendance'
+    Screen->>State: _submitAttendance() -> _submitted = true
+    State-->>Screen: Displays Attendance Submission Confirmation Card
+    Faculty->>Screen: Taps 'Done'
+    Screen->>State: _finishMark() -> _subView = null, return to Home Tab
+          </pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: COMPLETE FILE MAP (26 FILES) -->
+    <section class="doc-section" id="complete-file-map">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">🗺️</div>
+          <div>
+            <h2 class="section-title">6. Complete Codebase Map (Every File Audited)</h2>
+            <p class="section-subtitle">Exhaustive inventory of all 26 files with exact paths, sizes, exports, and responsibilities</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">File Structure Overview</div>
+        <div class="card-desc">
+          The AttendX project is structured cleanly under <span class="file-name">lib/core/</span> (constants, services, theme, shared widgets) and <span class="file-name">lib/features/</span> (role-based presentation modules & mock data), accompanied by high-coverage widget tests under <span class="file-name">test/</span>.
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>File Path & Name</th>
+                <th>Size / Lines</th>
+                <th>Category</th>
+                <th>Key Classes & Functions</th>
+                <th>Detailed Purpose & Responsibility</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 1 -->
+              <tr>
+                <td>1</td>
+                <td><span class="file-name">lib/main.dart</span></td>
+                <td><span class="code-badge">784 B</span><br>33 lines</td>
+                <td><span class="badge-pill badge-red">App Root</span></td>
+                <td><code>main()</code>, <code>AttendXApp</code></td>
+                <td>Initializes Flutter bindings, applies transparent System UI status bar styling, binds <code>AppRouter.router</code> and <code>AppTheme.light</code> to <code>MaterialApp.router</code>.</td>
+              </tr>
+              <!-- 2 -->
+              <tr>
+                <td>2</td>
+                <td><span class="file-name">lib/core/constants/app_constants.dart</span></td>
+                <td><span class="code-badge">350 B</span><br>13 lines</td>
+                <td><span class="badge-pill badge-gray">Constants</span></td>
+                <td><code>AppConstants</code>, <code>UserRole</code></td>
+                <td>Defines global application metadata (appName='AttendX', appVersion='1.0.0') and the 4 canonical role strings (<code>student</code>, <code>faculty</code>, <code>hod</code>, <code>admin</code>).</td>
+              </tr>
+              <!-- 3 -->
+              <tr>
+                <td>3</td>
+                <td><span class="file-name">lib/core/services/app_router.dart</span></td>
+                <td><span class="code-badge">3,718 B</span><br>121 lines</td>
+                <td><span class="badge-pill badge-blue">Routing</span></td>
+                <td><code>AppRouter</code>, <code>_buildApplePage()</code></td>
+                <td>GoRouter 14 instance with declarative guard redirects. Enforces guest vs auth protection, handles 8 routes, and applies Apple-style 320ms easeOutCubic slide-and-fade page transitions.</td>
+              </tr>
+              <!-- 4 -->
+              <tr>
+                <td>4</td>
+                <td><span class="file-name">lib/core/services/auth_service.dart</span></td>
+                <td><span class="code-badge">3,167 B</span><br>119 lines</td>
+                <td><span class="badge-pill badge-blue">Auth Service</span></td>
+                <td><code>AuthService</code></td>
+                <td>Manages in-memory authentication sessions for demo mode. Stores hardcoded demo accounts, performs login authentication, in-memory sign-up, session profile extraction, and role route resolution.</td>
+              </tr>
+              <!-- 5 -->
+              <tr>
+                <td>5</td>
+                <td><span class="file-name">lib/core/theme/app_theme.dart</span></td>
+                <td><span class="code-badge">10,569 B</span><br>315 lines</td>
+                <td><span class="badge-pill badge-green">Theme & Tokens</span></td>
+                <td><code>AppColors</code>, <code>AppCurves</code>, <code>AppTheme</code>, <code>AppShadows</code>, <code>AppBorderRadius</code>, <code>AppGradients</code>, <code>AppTypography</code>, <code>AppSpacing</code></td>
+                <td>Single source of design truth: Apple + Shadcn Zinc palette (zinc50-zinc950), #E53935 primary red, soft elevation shadows, spring motion physics, and typography scales based on Google Fonts Inter.</td>
+              </tr>
+              <!-- 6 -->
+              <tr>
+                <td>6</td>
+                <td><span class="file-name">lib/core/widgets/animated_metric_counter.dart</span></td>
+                <td><span class="code-badge">2,364 B</span><br>89 lines</td>
+                <td><span class="badge-pill badge-green">UI Widget</span></td>
+                <td><code>AnimatedMetricCounter</code>, <code>StaggeredEntrance</code></td>
+                <td>Animated count-up widget using <code>TweenAnimationBuilder</code> for smooth 0-100% metrics. Also exports <code>StaggeredEntrance</code> for sequential fade-and-slide card loading.</td>
+              </tr>
+              <!-- 7 -->
+              <tr>
+                <td>7</td>
+                <td><span class="file-name">lib/core/widgets/apple_pressable.dart</span></td>
+                <td><span class="code-badge">3,279 B</span><br>125 lines</td>
+                <td><span class="badge-pill badge-green">UI Widget</span></td>
+                <td><code>ApplePressable</code>, <code>_ApplePressableState</code></td>
+                <td>Tactile Apple-style spring press wrapper. Scales to 0.965 on touch-down, triggers light haptic feedback (<code>HapticFeedback.lightImpact</code>), and bounces back on release.</td>
+              </tr>
+              <!-- 8 -->
+              <tr>
+                <td>8</td>
+                <td><span class="file-name">lib/core/widgets/frosted_nav_bar.dart</span></td>
+                <td><span class="code-badge">3,973 B</span><br>137 lines</td>
+                <td><span class="badge-pill badge-green">UI Widget</span></td>
+                <td><code>FrostedNavBar</code>, <code>FrostedNavItem</code></td>
+                <td>Bottom navigation bar with real-time blur backdrop filter (sigma 24.0), hairline top border, sliding animated selection pill, and selection haptics.</td>
+              </tr>
+              <!-- 9 -->
+              <tr>
+                <td>9</td>
+                <td><span class="file-name">lib/core/widgets/shadcn_badge.dart</span></td>
+                <td><span class="code-badge">3,150 B</span><br>118 lines</td>
+                <td><span class="badge-pill badge-green">UI Widget</span></td>
+                <td><code>ShadcnBadge</code>, <code>ShadcnBadgeVariant</code></td>
+                <td>Hairline bordered badge pill component supporting 7 semantic variants (defaultVariant, secondary, outline, destructive, success, warning, info).</td>
+              </tr>
+              <!-- 10 -->
+              <tr>
+                <td>10</td>
+                <td><span class="file-name">lib/core/widgets/shadcn_button.dart</span></td>
+                <td><span class="code-badge">4,425 B</span><br>169 lines</td>
+                <td><span class="badge-pill badge-green">UI Widget</span></td>
+                <td><code>ShadcnButton</code>, <code>ShadcnButtonVariant</code>, <code>ShadcnButtonSize</code></td>
+                <td>Apple-haptic button with 6 variants (primary, secondary, outline, ghost, destructive, brand) and 3 sizes (sm, md, lg), with built-in loading spinner state.</td>
+              </tr>
+              <!-- 11 -->
+              <tr>
+                <td>11</td>
+                <td><span class="file-name">lib/core/widgets/shadcn_card.dart</span></td>
+                <td><span class="code-badge">3,987 B</span><br>125 lines</td>
+                <td><span class="badge-pill badge-green">UI Widget</span></td>
+                <td><code>ShadcnCard</code></td>
+                <td>Apple/Shadcn container card with hairline border, soft drop-shadow, title, description, trailing widget, and optional divider footer.</td>
+              </tr>
+              <!-- 12 -->
+              <tr>
+                <td>12</td>
+                <td><span class="file-name">lib/features/splash/splash_screen.dart</span></td>
+                <td><span class="code-badge">4,315 B</span><br>133 lines</td>
+                <td><span class="badge-pill badge-red">Screen</span></td>
+                <td><code>SplashScreen</code>, <code>_SplashScreenState</code></td>
+                <td>Cold start entry screen. Renders AttendX logo with a spring scale-and-fade animation, bottom progress bar, and automatically hands off to <code>/onboarding</code> in 1.4s.</td>
+              </tr>
+              <!-- 13 -->
+              <tr>
+                <td>13</td>
+                <td><span class="file-name">lib/features/onboarding/onboarding_screen.dart</span></td>
+                <td><span class="code-badge">8,897 B</span><br>255 lines</td>
+                <td><span class="badge-pill badge-red">Screen</span></td>
+                <td><code>OnboardingScreen</code>, <code>_OnboardingPage</code></td>
+                <td>4-slide feature carousel with animated page indicators, 'Skip' button, and 'Get Started' action transitioning users to the Login view.</td>
+              </tr>
+              <!-- 14 -->
+              <tr>
+                <td>14</td>
+                <td><span class="file-name">lib/features/auth/login_screen.dart</span></td>
+                <td><span class="code-badge">15,699 B</span><br>526 lines</td>
+                <td><span class="badge-pill badge-red">Screen</span></td>
+                <td><code>LoginScreen</code>, <code>_LoginScreenState</code></td>
+                <td>Apple-style sign-in screen. Features quick 1-tap demo credentials chips for Admin, HOD, Faculty, and Student, form validation, error banners, and link to sign-up.</td>
+              </tr>
+              <!-- 15 -->
+              <tr>
+                <td>15</td>
+                <td><span class="file-name">lib/features/auth/signup_screen.dart</span></td>
+                <td><span class="code-badge">11,703 B</span><br>317 lines</td>
+                <td><span class="badge-pill badge-red">Screen</span></td>
+                <td><code>SignUpScreen</code>, <code>_SignUpScreenState</code></td>
+                <td>Registration screen allowing creation of an in-memory demo account with full name, email, password, and custom role selection pills.</td>
+              </tr>
+              <!-- 16 -->
+              <tr>
+                <td>16</td>
+                <td><span class="file-name">lib/features/student/student_mock_data.dart</span></td>
+                <td><span class="code-badge">6,286 B</span><br>225 lines</td>
+                <td><span class="badge-pill badge-amber">Mock Domain</span></td>
+                <td><code>StudentMockData</code>, <code>StudentSubject</code>, <code>StudentAttendanceRecord</code>, <code>AttendanceStatus</code></td>
+                <td>Local student domain models. Contains Rahul Student's identity, 5 enrolled subjects (CS201 to CS205), 15 chronological attendance history entries, and aggregate calculator getters.</td>
+              </tr>
+              <!-- 17 -->
+              <tr>
+                <td>17</td>
+                <td><span class="file-name">lib/features/student/student_dashboard.dart</span></td>
+                <td><span class="code-badge">46,963 B</span><br>1,499 lines</td>
+                <td><span class="badge-pill badge-red">Screen</span></td>
+                <td><code>StudentDashboard</code>, <code>_StudentDashboardState</code>, and sub-widgets</td>
+                <td>Complete student portal: 3 bottom navigation tabs (Home, View, Info), circular overall gauge, low attendance risk warning, subject breakdown modal sheet with required attendance formula calculator, and history filter.</td>
+              </tr>
+              <!-- 18 -->
+              <tr>
+                <td>18</td>
+                <td><span class="file-name">lib/features/faculty/faculty_mock_data.dart</span></td>
+                <td><span class="code-badge">5,059 B</span><br>189 lines</td>
+                <td><span class="badge-pill badge-amber">Mock Domain</span></td>
+                <td><code>FacultyMockData</code>, <code>FacultySubject</code>, <code>StudentAttendance</code></td>
+                <td>Faculty domain models for Dr. Priya Patel. Contains 2 taught subjects (Data Structures, Operating Systems) with 8 students each and individual attendance session stats.</td>
+              </tr>
+              <!-- 19 -->
+              <tr>
+                <td>19</td>
+                <td><span class="file-name">lib/features/faculty/faculty_dashboard.dart</span></td>
+                <td><span class="code-badge">48,792 B</span><br>1,647 lines</td>
+                <td><span class="badge-pill badge-red">Screen</span></td>
+                <td><code>FacultyDashboard</code>, <code>_FacultyDashboardState</code>, <code>_SubView</code></td>
+                <td>Faculty portal: Home, View (Overview), Info tabs, plus 2 dedicated full-page subviews for Attendance Marking (with individual and bulk status buttons) and Detailed Reports.</td>
+              </tr>
+              <!-- 20 -->
+              <tr>
+                <td>20</td>
+                <td><span class="file-name">lib/features/hod/hod_mock_data.dart</span></td>
+                <td><span class="code-badge">6,056 B</span><br>266 lines</td>
+                <td><span class="badge-pill badge-amber">Mock Domain</span></td>
+                <td><code>HodMockData</code>, <code>HodFaculty</code>, <code>HodSubject</code>, <code>HodStudent</code>, <code>HodActivity</code></td>
+                <td>Department-level domain models for Computer Science. Includes 4 faculty members, 5 subjects, 8 monitored students, 8 recent class activities, and aggregate percentage calculation.</td>
+              </tr>
+              <!-- 21 -->
+              <tr>
+                <td>21</td>
+                <td><span class="file-name">lib/features/hod/hod_dashboard.dart</span></td>
+                <td><span class="code-badge">40,765 B</span><br>1,357 lines</td>
+                <td><span class="badge-pill badge-red">Screen</span></td>
+                <td><code>HodDashboard</code>, <code>_HodDashboardState</code></td>
+                <td>HOD portal: Segmented control (Dashboard, Faculty, Reports) coupled with Frosted bottom navigation. Includes department attendance rates, faculty submission cards, and defaulter tracking.</td>
+              </tr>
+              <!-- 22 -->
+              <tr>
+                <td>22</td>
+                <td><span class="file-name">lib/features/admin/admin_mock_data.dart</span></td>
+                <td><span class="code-badge">6,703 B</span><br>162 lines</td>
+                <td><span class="badge-pill badge-amber">Mock Domain</span></td>
+                <td><code>AdminMockData</code>, <code>AdminStudent</code>, <code>AdminFaculty</code>, <code>AdminSubject</code>, <code>AdminClass</code>, <code>AdminDepartment</code></td>
+                <td>Institution-wide database models: 8 students, 4 faculty, 5 subjects, 3 classes, 3 departments, and SMTP server configuration settings.</td>
+              </tr>
+              <!-- 23 -->
+              <tr>
+                <td>23</td>
+                <td><span class="file-name">lib/features/admin/admin_dashboard.dart</span></td>
+                <td><span class="code-badge">36,974 B</span><br>1,263 lines</td>
+                <td><span class="badge-pill badge-red">Screen</span></td>
+                <td><code>AdminDashboard</code>, <code>_AdminDashboardState</code>, <code>_ManageSection</code></td>
+                <td>Central Admin dashboard: 2x2 high-level metric cards, interactive management drawers for Users, Depts, Classes, Subjects, Enrollments, and Email Settings, plus system status view.</td>
+              </tr>
+              <!-- 24 -->
+              <tr>
+                <td>24</td>
+                <td><span class="file-name">test/splash_screen_test.dart</span></td>
+                <td><span class="code-badge">1,198 B</span><br>31 lines</td>
+                <td><span class="badge-pill badge-blue">Unit/Widget Test</span></td>
+                <td><code>main()</code></td>
+                <td>Validates that SplashScreen is the cold-start root widget, renders branding, and correctly transitions to OnboardingScreen after 1400ms.</td>
+              </tr>
+              <!-- 25 -->
+              <tr>
+                <td>25</td>
+                <td><span class="file-name">test/student_dashboard_layout_test.dart</span></td>
+                <td><span class="code-badge">2,223 B</span><br>51 lines</td>
+                <td><span class="badge-pill badge-blue">Unit/Widget Test</span></td>
+                <td><code>main()</code></td>
+                <td>Layout regression test verifying that <code>FrostedNavBar</code> correctly shrink-wraps at the bottom of the screen without squishing the body content.</td>
+              </tr>
+              <!-- 26 -->
+              <tr>
+                <td>26</td>
+                <td><span class="file-name">test/widget_test.dart</span></td>
+                <td><span class="code-badge">279 B</span><br>10 lines</td>
+                <td><span class="badge-pill badge-blue">Smoke Test</span></td>
+                <td><code>main()</code></td>
+                <td>Smoke test verifying that the AttendXApp root widget mounts cleanly without unhandled exceptions.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 7: DETAILED PAGE-BY-PAGE WALKTHROUGH -->
+    <section class="doc-section" id="page-walkthrough">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">📱</div>
+          <div>
+            <h2 class="section-title">7. Start-to-End Page Walkthrough (All 8 Screens)</h2>
+            <p class="section-subtitle">Exhaustive explanation of what each page renders, user actions, data flow, and transitions</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE 1: SPLASH -->
+      <div class="page-walkthrough-card">
+        <div class="page-header-row">
+          <div class="page-name-title">
+            <div class="page-step-num">1</div>
+            <div>Splash Screen <span class="code-badge">/splash</span></div>
+          </div>
+          <span class="badge-pill badge-red">Cold Start Entry</span>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+          The initial greeting screen shown immediately when the Flutter engine completes initialization.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Visual Composition:</strong> Centered AttendX logo (school cap icon inside a rounded red square with soft red glow), 'AttendX' title in Inter 32px font, and a 'ERP Attendance System' badge pill.</li>
+          <li><strong>Animation Mechanism:</strong> Driven by an <code>AnimationController</code> (750ms duration) with <code>AppCurves.springBouncy</code> cubic scaling and easeOut fade.</li>
+          <li><strong>Auto-Transition:</strong> A non-blocking <code>Timer</code> fires at <strong>1,400ms</strong> to navigate smoothly to <code>/onboarding</code> using <code>context.go()</code>.</li>
+        </ul>
+      </div>
+
+      <!-- PAGE 2: ONBOARDING -->
+      <div class="page-walkthrough-card">
+        <div class="page-header-row">
+          <div class="page-name-title">
+            <div class="page-step-num">2</div>
+            <div>Onboarding Screen <span class="code-badge">/onboarding</span></div>
+          </div>
+          <span class="badge-pill badge-blue">Product Introduction</span>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+          A sleek 4-step carousel guiding new users through AttendX's capabilities.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Slide 1 - Fast Attendance:</strong> "Mark attendance in seconds" (faculty 1-tap roll calls).</li>
+          <li><strong>Slide 2 - Student Visibility:</strong> "Track your attendance" (live subject percentages & standing).</li>
+          <li><strong>Slide 3 - Management Oversight:</strong> "Insights for HODs and Admins" (department-wide reports & trends).</li>
+          <li><strong>Slide 4 - Design Excellence:</strong> "Fast, clean and simple" (tactile Apple-grade fluidity).</li>
+          <li><strong>Interactions:</strong> Swiping triggers animated pill width expansions (8px to 24px); tapping 'Skip' or 'Get Started' immediately routes to <code>/login</code>.</li>
+        </ul>
+      </div>
+
+      <!-- PAGE 3: LOGIN -->
+      <div class="page-walkthrough-card">
+        <div class="page-header-row">
+          <div class="page-name-title">
+            <div class="page-step-num">3</div>
+            <div>Login Screen <span class="code-badge">/login</span></div>
+          </div>
+          <span class="badge-pill badge-red">Authentication Gateway</span>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+          The authentication hub featuring one-tap demo account switching for rapid evaluation.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Demo Account Selector Chips:</strong> 4 toggleable chips at the top of the form (Admin, HOD, Faculty, Student) that automatically populate email and password fields.</li>
+          <li><strong>Form Validation:</strong> Checks for non-empty credentials and valid email formatting before invoking <code>AuthService.login</code>.</li>
+          <li><strong>Role Routing:</strong> Upon successful credentials match, dynamically routes to <code>/student</code>, <code>/faculty</code>, <code>/hod</code>, or <code>/admin</code>.</li>
+          <li><strong>Registration Link:</strong> Allows users without accounts to navigate to <code>/signup</code>.</li>
+        </ul>
+      </div>
+
+      <!-- PAGE 4: SIGNUP -->
+      <div class="page-walkthrough-card">
+        <div class="page-header-row">
+          <div class="page-name-title">
+            <div class="page-step-num">4</div>
+            <div>Sign-Up Screen <span class="code-badge">/signup</span></div>
+          </div>
+          <span class="badge-pill badge-green">Account Registration</span>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+          Permits registration of new in-memory user accounts for live demonstration.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Fields:</strong> Full Name, Email Address, Password, and Password Confirmation.</li>
+          <li><strong>Role Picker:</strong> Interactive pill selector choosing whether the new user registers as a Student, Faculty, HOD, or Admin.</li>
+          <li><strong>In-Memory Provisioning:</strong> <code>AuthService.signUp()</code> adds the user to the local runtime memory map and signs them in immediately.</li>
+        </ul>
+      </div>
+
+      <!-- PAGE 5: STUDENT DASHBOARD -->
+      <div class="page-walkthrough-card">
+        <div class="page-header-row">
+          <div class="page-name-title">
+            <div class="page-step-num">5</div>
+            <div>Student Dashboard <span class="code-badge">/student</span></div>
+          </div>
+          <span class="badge-pill badge-blue">Student Experience</span>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+          A comprehensive portal for students to track attendance across subjects.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Tab 1 - Home:</strong> Circular overall percentage gauge (76.7%), total classes attended (188/245), 'At Risk' warning card if any subject is below 75%, and quick stats row.</li>
+          <li><strong>Interactive Subject Sheet:</strong> Tapping any subject card opens a modal sheet displaying attendance breakdown, teacher name, and a dynamic simulator stating exactly how many more classes must be attended to achieve 75%.</li>
+          <li><strong>Tab 2 - View (History):</strong> Chronological timeline of attendance sessions with filter chips (All, CS201, CS202, CS203, CS204, CS205) and colored status pills.</li>
+          <li><strong>Tab 3 - Info:</strong> Student identity profile card (Rahul Student, Roll No: CS2022-001, Computer Science 3rd Year) and academic attendance guidelines.</li>
+        </ul>
+      </div>
+
+      <!-- PAGE 6: FACULTY DASHBOARD -->
+      <div class="page-walkthrough-card">
+        <div class="page-header-row">
+          <div class="page-name-title">
+            <div class="page-step-num">6</div>
+            <div>Faculty Dashboard <span class="code-badge">/faculty</span></div>
+          </div>
+          <span class="badge-pill badge-green">Faculty Experience</span>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+          The teacher's command center for conducting sessions and reviewing class performance.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Tab 1 - Home:</strong> Daily greeting banner, quick action buttons ('Mark Attendance', 'View Reports'), aggregate metrics, and list of assigned subjects (Data Structures CS201, Operating Systems CS205).</li>
+          <li><strong>Sub-View - Mark Attendance:</strong> Selecting a subject launches the full-screen roll-call interface. Faculty can tap Present (green), Absent (red), or Late (amber) for each of the 8 students, or use the 'Mark All Present' shortcut button. Submitting attendance records the session with an Apple-style success confirmation.</li>
+          <li><strong>Sub-View - Reports:</strong> Visual subject performance distribution, class averages, and list of defaulters needing academic intervention.</li>
+          <li><strong>Tab 2 - View (Overview):</strong> Tabular subject summary showing total conducted sessions, student counts, and class averages.</li>
+          <li><strong>Tab 3 - Info:</strong> Faculty profile for Dr. Priya Patel, department info, and institutional guidelines.</li>
+        </ul>
+      </div>
+
+      <!-- PAGE 7: HOD DASHBOARD -->
+      <div class="page-walkthrough-card">
+        <div class="page-header-row">
+          <div class="page-name-title">
+            <div class="page-step-num">7</div>
+            <div>HOD Dashboard <span class="code-badge">/hod</span></div>
+          </div>
+          <span class="badge-pill badge-amber">Head of Department</span>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+          Provides executive department oversight for Dr. HOD Patel.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Top Segmented Bar:</strong> Seamlessly switches between <strong>Dashboard</strong>, <strong>Faculty</strong>, and <strong>Reports</strong> views.</li>
+          <li><strong>Segment 1 - Dashboard:</strong> Department average attendance (88.3%), total sessions held (700), present (618), absent (66), and late (16), followed by individual subject health bars and real-time class feed.</li>
+          <li><strong>Segment 2 - Faculty:</strong> Complete faculty list (Dr. Priya Patel, Prof. Amit Sharma, Dr. Sneha Reddy, Prof. Vikram Singh) showing their average attendance and total records submitted.</li>
+          <li><strong>Segment 3 - Reports:</strong> Student attendance distribution across the Computer Science department and instant identification of at-risk students below 75%.</li>
+          <li><strong>Bottom Nav - Info:</strong> Department profile, system metrics, and secure sign-out.</li>
+        </ul>
+      </div>
+
+      <!-- PAGE 8: ADMIN DASHBOARD -->
+      <div class="page-walkthrough-card">
+        <div class="page-header-row">
+          <div class="page-name-title">
+            <div class="page-step-num">8</div>
+            <div>Admin Dashboard <span class="code-badge">/admin</span></div>
+          </div>
+          <span class="badge-pill badge-red">Institution Super-Admin</span>
+        </div>
+        <p style="font-size: 14px; color: #475569; margin-bottom: 12px;">
+          Full administrative configuration and institutional entity management.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Tab 1 - Home:</strong> 2x2 metric grid displaying Total Users (12), Departments (3), Classes (3), and Subjects (5), plus quick departmental breakdowns.</li>
+          <li><strong>Tab 2 - Manage (6 Drawers):</strong>
+            <ul style="margin: 8px 0 0 20px; font-size: 13px; color: #64748B;">
+              <li><strong>Users:</strong> Interactive directory of all 8 students and 4 faculty with roll numbers, emails, and roles.</li>
+              <li><strong>Departments:</strong> Computer Science, IT, Electronics with assigned HODs and student counts.</li>
+              <li><strong>Classes:</strong> CS 3rd Year A, CS 3rd Year B, CS 2nd Year A batches.</li>
+              <li><strong>Subjects:</strong> Credit allocations (3 or 4 credits) and assigned instructors.</li>
+              <li><strong>Enrollments:</strong> Student batch roster allocation status.</li>
+              <li><strong>Email Settings:</strong> SMTP server configuration (<code>smtp.attendx.com:587</code>), notification toggles (Attendance Alerts, Weekly Reports).</li>
+            </ul>
+          </li>
+          <li><strong>Tab 3 - Info:</strong> Admin User credentials, app build version (1.0.0), server health, and logout trigger.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SECTION 8: FUNCTIONS & MODULES CATALOG -->
+    <section class="doc-section" id="functions-catalog">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <div class="section-icon">⚙️</div>
+          <div>
+            <h2 class="section-title">8. Modules & Functions Master Catalog</h2>
+            <p class="section-subtitle">Exhaustive technical catalog of methods, signatures, and operational logic</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Core Service & Controller Functions</div>
+        <div class="card-desc">Detailed programmatic signatures across authentication, navigation, and state calculations.</div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Class / Module</th>
+                <th>Method / Getter Signature</th>
+                <th>Return Type</th>
+                <th>Operational Logic & Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>AuthService</code></td>
+                <td><code>login(String email, String password)</code></td>
+                <td><code>Future&lt;Map&lt;String, dynamic&gt;&gt;</code></td>
+                <td>Normalizes email to lower case, validates against <code>_demoUsers</code> map, updates <code>_demoMode=true</code> and stores current profile. Returns success status and role.</td>
+              </tr>
+              <tr>
+                <td><code>AuthService</code></td>
+                <td><code>signUp({fullName, email, password, role})</code></td>
+                <td><code>Future&lt;Map&lt;String, dynamic&gt;&gt;</code></td>
+                <td>Checks duplicate email key in <code>_demoUsers</code>, writes new user record into memory, signs the user in immediately, and sets demo profile.</td>
+              </tr>
+              <tr>
+                <td><code>AuthService</code></td>
+                <td><code>logout()</code></td>
+                <td><code>Future&lt;void&gt;</code></td>
+                <td>Resets <code>_demoMode = false</code> and clears <code>_demoProfile = null</code> to invalidate the active session.</td>
+              </tr>
+              <tr>
+                <td><code>AuthService</code></td>
+                <td><code>routeForRole(String? role)</code></td>
+                <td><code>String</code></td>
+                <td>Maps a role constant to its route string (e.g. <code>UserRole.student</code> -> <code>'/student'</code>). Defaults to <code>'/login'</code> if unrecognized.</td>
+              </tr>
+              <tr>
+                <td><code>AppRouter</code></td>
+                <td><code>_buildApplePage(context, state, child)</code></td>
+                <td><code>Page&lt;dynamic&gt;</code></td>
+                <td>Constructs a <code>CustomTransitionPage</code> combining an easeOutCubic slide (begin: Offset(0.06, 0.0), end: Offset.zero) with a fade transition over 320ms.</td>
+              </tr>
+              <tr>
+                <td><code>StudentMockData</code></td>
+                <td><code>overallPercent</code></td>
+                <td><code>double</code></td>
+                <td>Computes overall attendance ratio across all enrolled subjects: <code>(totalClassesAttended / totalClassesHeld) * 100</code>.</td>
+              </tr>
+              <tr>
+                <td><code>StudentMockData</code></td>
+                <td><code>belowRequirement</code></td>
+                <td><code>List&lt;StudentSubject&gt;</code></td>
+                <td>Filters enrolled subjects where <code>subject.percent &lt; 75.0</code> and sorts worst-first.</td>
+              </tr>
+              <tr>
+                <td><code>FacultySubject</code></td>
+                <td><code>percentFor(StudentAttendance s)</code></td>
+                <td><code>int</code></td>
+                <td>Calculates a single student's attendance percentage for this course: <code>(s.attendedCount * 100 / sessions).round()</code>.</td>
+              </tr>
+              <tr>
+                <td><code>FacultySubject</code></td>
+                <td><code>averagePercent</code></td>
+                <td><code>int</code></td>
+                <td>Computes overall class attendance average: <code>((presentTotal + lateTotal) * 100 / (sessions * studentCount)).round()</code>.</td>
+              </tr>
+              <tr>
+                <td><code>HodMockData</code></td>
+                <td><code>averageAttendance</code></td>
+                <td><code>double</code></td>
+                <td>Calculates department-wide average: <code>(totalPresent / totalSessions) * 100</code>.</td>
+              </tr>
+              <tr>
+                <td><code>AdminMockData</code></td>
+                <td><code>totalUsers</code></td>
+                <td><code>int</code></td>
+                <td>Aggregates the sum of all enrolled students and active faculty: <code>students.length + faculty.length</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="doc-footer">
+      <p>AttendX ERP System Architecture Blueprint · Generated automatically from complete static code analysis.</p>
+      <p style="margin-top: 4px; font-size: 11.5px;">All rights reserved · AttendX Offline Showcase Edition 1.0.0</p>
+    </footer>
+
+  </main>
+</div>
+
+</body>
+</html>

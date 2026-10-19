@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture & Flow Diagrams</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Geist', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 20px;
+            min-height: 100vh;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #ff6b00;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .diagram-section {
+            background: #ffffff;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 2px solid #ff6b00;
+        }
+        .diagram-section h2 {
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #ff6b00;
+            font-size: 1.8em;
+            font-weight: 600;
+        }
+        .diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .diagram-description {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e0e0e0;
+            border-radius: 8px;
+            color: #1a1a1a;
+            line-height: 1.6;
+            font-family: 'Geist Mono', monospace;
+            font-size: 0.9em;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-project-diagram"></i> Architecture & Flow Diagrams</h1>
+
+        <!-- System Architecture Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-sitemap"></i> System Architecture</h2>
+            <div class="diagram">
+                <div class="mermaid">
+graph TB
+    subgraph "Client Layer"
+        A["<i class='fas fa-globe'></i> Web Browser"]
+        B["<i class='fas fa-mobile-alt'></i> Mobile App"]
+    end
+
+    subgraph "API Gateway"
+        C["<i class='fas fa-balance-scale'></i> Load Balancer"]
+        D["<i class='fas fa-door-open'></i> API Gateway"]
+    end
+
+    subgraph "Application Layer"
+        E["<i class='fas fa-lock'></i> Auth Service"]
+        F["<i class='fas fa-user'></i> User Service"]
+        G["<i class='fas fa-briefcase'></i> Business Service"]
+        H["<i class='fas fa-bell'></i> Notification Service"]
+    end
+
+    subgraph "Data Layer"
+        I["<i class='fas fa-database'></i> Primary Database"]
+        J["<i class='fas fa-bolt'></i> Cache - Redis"]
+        K["<i class='fas fa-envelope-open-text'></i> Message Queue"]
+    end
+
+    subgraph "External Services"
+        L["<i class='fas fa-envelope'></i> Email Service"]
+        M["<i class='fas fa-credit-card'></i> Payment Gateway"]
+        N["<i class='fas fa-chart-line'></i> Analytics"]
+    end
+
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    D --> F
+    D --> G
+    D --> H
+
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+
+    E --> J
+    F --> J
+    G --> J
+
+    H --> K
+    G --> K
+
+    H --> L
+    G --> M
+    D --> N
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> High-level system architecture showing the multi-tier structure with client layer, API gateway, application services, data storage, and external integrations.
+            </div>
+        </div>
+
+        <!-- User Flow Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-user-shield"></i> User Authentication Flow</h2>
+            <div class="diagram">
+                <div class="mermaid">
+flowchart TD
+    Start(["<i class='fas fa-play'></i> Start"]) --> Login{"<i class='fas fa-question-circle'></i> User Action"}
+    Login -->|Login| EnterCredentials["<i class='fas fa-key'></i> Enter Credentials"]
+    Login -->|Register| RegisterForm["<i class='fas fa-file-alt'></i> Registration Form"]
+    Login -->|Forgot Password| ResetFlow["<i class='fas fa-lock'></i> Password Reset"]
+
+    EnterCredentials --> Validate["<i class='fas fa-check-circle'></i> Validate Credentials"]
+    Validate -->|Success| GenerateToken["<i class='fas fa-ticket-alt'></i> Generate JWT Token"]
+    Validate -->|Failure| ShowError["<i class='fas fa-exclamation-triangle'></i> Show Error Message"]
+
+    ShowError --> EnterCredentials
+
+    RegisterForm --> CreateUser["<i class='fas fa-user-plus'></i> Create User Account"]
+    CreateUser --> SendVerification["<i class='fas fa-envelope'></i> Send Verification Email"]
+    SendVerification --> VerifyEmail["<i class='fas fa-search'></i> Verify Email"]
+    VerifyEmail --> GenerateToken
+
+    ResetFlow --> SendResetLink["<i class='fas fa-link'></i> Send Reset Link"]
+    SendResetLink --> ResetPassword["<i class='fas fa-sync-alt'></i> Reset Password"]
+    ResetPassword --> GenerateToken
+
+    GenerateToken --> Redirect["<i class='fas fa-home'></i> Redirect to Dashboard"]
+    Redirect --> End(["<i class='fas fa-flag-checkered'></i> End"])
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> Complete user authentication flow including login, registration, and password reset processes with validation and token generation.
+            </div>
+        </div>
+
+        <!-- Data Flow Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-exchange-alt"></i> Data Flow Diagram</h2>
+            <div class="diagram">
+                <div class="mermaid">
+flowchart LR
+    User["<i class='fas fa-user'></i> User Input"] -->|HTTP Request| API["<i class='fas fa-plug'></i> API Endpoint"]
+    API -->|Validate| Validator["<i class='fas fa-shield-alt'></i> Request Validator"]
+    Validator -->|Valid| Controller["<i class='fas fa-gamepad'></i> Controller"]
+    Validator -->|Invalid| Error["<i class='fas fa-exclamation-circle'></i> Error Response"]
+
+    Controller --> Service["<i class='fas fa-cogs'></i> Business Logic Service"]
+    Service -->|Query| DB["<i class='fas fa-database'></i> Database"]
+    Service -->|Cache| Cache["<i class='fas fa-bolt'></i> Redis Cache"]
+    Service -->|Async| MQ["<i class='fas fa-envelope-open-text'></i> Message Queue"]
+
+    DB -->|Data| Service
+    Cache -->|Hit| Service
+    Cache -->|Miss| DB
+
+    Service --> Response["<i class='fas fa-box'></i> Response Formatter"]
+    Response -->|JSON| API
+    API -->|HTTP Response| User
+
+    MQ --> Worker["<i class='fas fa-hard-hat'></i> Background Worker"]
+    Worker --> Notification["<i class='fas fa-bell'></i> Notification Service"]
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> Data flow from user input through API validation, business logic, database/cache operations, and response formatting with async processing.
+            </div>
+        </div>
+
+        <!-- Sequence Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-random"></i> API Request Sequence</h2>
+            <div class="diagram">
+                <div class="mermaid">
+sequenceDiagram
+    participant Client
+    participant API as API Gateway
+    participant Auth as Auth Service
+    participant App as Application
+    participant DB as Database
+
+    Client->>API: POST /api/resource
+    API->>Auth: Validate Token
+    Auth-->>API: Token Valid
+
+    API->>App: Forward Request
+    App->>DB: Query Data
+    DB-->>App: Return Results
+
+    App->>App: Process Data
+    App-->>API: Return Response
+    API-->>Client: JSON Response
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> Sequence diagram showing the step-by-step interaction between client, API gateway, authentication service, application logic, and database.
+            </div>
+        </div>
+
+        <!-- Component Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-puzzle-piece"></i> Component Architecture</h2>
+            <div class="diagram">
+                <div class="mermaid">
+graph TD
+    subgraph "Frontend"
+        FE1["<i class='fas fa-cube'></i> React Components"]
+        FE2["<i class='fas fa-sync'></i> State Management"]
+        FE3["<i class='fas fa-plug'></i> API Client"]
+    end
+
+    subgraph "Backend"
+        BE1["<i class='fas fa-gamepad'></i> Controllers"]
+        BE2["<i class='fas fa-cogs'></i> Services"]
+        BE3["<i class='fas fa-box'></i> Repositories"]
+        BE4["<i class='fas fa-shield-alt'></i> Middleware"]
+    end
+
+    subgraph "Database"
+        DB1["<i class='fas fa-elephant'></i> PostgreSQL"]
+        DB2["<i class='fas fa-leaf'></i> MongoDB"]
+    end
+
+    subgraph "Infrastructure"
+        INF1["<i class='fas fa-file-alt'></i> Logger"]
+        INF2["<i class='fas fa-sliders-h'></i> Config"]
+        INF3["<i class='fas fa-bolt'></i> Cache"]
+    end
+
+    FE1 --> FE2
+    FE2 --> FE3
+    FE3 --> BE4
+
+    BE4 --> BE1
+    BE1 --> BE2
+    BE2 --> BE3
+    BE3 --> DB1
+    BE3 --> DB2
+
+    BE1 --> INF1
+    BE2 --> INF1
+    BE3 --> INF1
+    BE1 --> INF2
+    BE2 --> INF3
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> Component-level architecture showing the internal structure of frontend, backend, database, and infrastructure layers with their interactions.
+            </div>
+        </div>
+
+        <!-- Deployment Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-rocket"></i> Deployment Architecture</h2>
+            <div class="diagram">
+                <div class="mermaid">
+graph TB
+    subgraph "Production Environment"
+        subgraph "Load Balancer"
+            LB["<i class='fas fa-balance-scale'></i> Nginx/HAProxy"]
+        end
+
+        subgraph "Web Servers"
+            WS1["<i class='fas fa-server'></i> Server 1"]
+            WS2["<i class='fas fa-server'></i> Server 2"]
+            WS3["<i class='fas fa-server'></i> Server 3"]
+        end
+
+        subgraph "Application Servers"
+            AS1["<i class='fas fa-cogs'></i> App Server 1"]
+            AS2["<i class='fas fa-cogs'></i> App Server 2"]
+        end
+
+        subgraph "Database Cluster"
+            DB1["<i class='fas fa-database'></i> Primary DB"]
+            DB2["<i class='fas fa-database'></i> Replica 1"]
+            DB3["<i class='fas fa-database'></i> Replica 2"]
+        end
+
+        subgraph "Cache Layer"
+            CACHE["<i class='fas fa-bolt'></i> Redis Cluster"]
+        end
+    end
+
+    LB --> WS1
+    LB --> WS2
+    LB --> WS3
+
+    WS1 --> AS1
+    WS2 --> AS1
+    WS3 --> AS2
+
+    AS1 --> DB1
+    AS2 --> DB1
+
+    DB1 --> DB2
+    DB1 --> DB3
+
+    AS1 --> CACHE
+    AS2 --> CACHE
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> Production deployment architecture showing load balancing, multiple web and application servers, database replication, and caching layer.
+            </div>
+        </div>
+
+        <!-- State Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-bullseye"></i> Order State Machine</h2>
+            <div class="diagram">
+                <div class="mermaid">
+stateDiagram-v2
+    [*] --> Created: User places order
+    Created --> Processing: Payment confirmed
+    Created --> Cancelled: User cancels
+
+    Processing --> Shipped: Items prepared
+    Processing --> Failed: Payment failed
+    Processing --> Cancelled: User cancels
+
+    Shipped --> Delivered: Package delivered
+    Shipped --> Returned: Return requested
+
+    Delivered --> [*]: Order complete
+    Returned --> Refunded: Return approved
+    Refunded --> [*]: Process complete
+
+    Failed --> [*]: Order terminated
+    Cancelled --> [*]: Order terminated
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> State machine diagram showing the lifecycle of an order from creation through processing, shipping, delivery, and possible returns or cancellations.
+            </div>
+        </div>
+
+        <!-- ER Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-database"></i> Entity Relationship Diagram</h2>
+            <div class="diagram">
+                <div class="mermaid">
+erDiagram
+    USER ||--o{ ORDER : places
+    USER ||--o{ REVIEW : writes
+    USER {
+        int id PK
+        string name
+        string email
+        string password
+        datetime created_at
+    }
+
+    ORDER ||--|{ ORDER_ITEM : contains
+    ORDER ||--|| PAYMENT : has
+    ORDER {
+        int id PK
+        int user_id FK
+        decimal total
+        string status
+        datetime created_at
+    }
+
+    PRODUCT ||--o{ ORDER_ITEM : "included in"
+    PRODUCT ||--o{ REVIEW : "has reviews"
+    PRODUCT {
+        int id PK
+        string name
+        string description
+        decimal price
+        int stock
+    }
+
+    ORDER_ITEM {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+        decimal unit_price
+    }
+
+    PAYMENT {
+        int id PK
+        int order_id FK
+        decimal amount
+        string status
+        string transaction_id
+    }
+
+    REVIEW {
+        int id PK
+        int user_id FK
+        int product_id FK
+        int rating
+        string comment
+        datetime created_at
+    }
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> Entity relationship diagram showing the database schema for users, orders, products, payments, and reviews with their relationships.
+            </div>
+        </div>
+
+        <!-- Class Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-code"></i> Class Diagram</h2>
+            <div class="diagram">
+                <div class="mermaid">
+classDiagram
+    class BaseController {
+        +handleRequest()
+        +sendResponse()
+        #validateRequest()
+    }
+
+    class UserService {
+        +createUser()
+        +getUser()
+        +updateUser()
+        +deleteUser()
+        -hashPassword()
+    }
+
+    class OrderService {
+        +createOrder()
+        +getOrder()
+        +updateStatus()
+        -calculateTotal()
+        -validateInventory()
+    }
+
+    class UserRepository {
+        +save()
+        +findById()
+        +findAll()
+        +delete()
+    }
+
+    class OrderRepository {
+        +save()
+        +findById()
+        +findByUser()
+        +updateStatus()
+    }
+
+    BaseController <|-- UserService
+    BaseController <|-- OrderService
+    UserService --> UserRepository : uses
+    OrderService --> OrderRepository : uses
+    UserRepository ..> Database : connects
+    OrderRepository ..> Database : connects
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> Class diagram showing the object-oriented design with base controller, service classes, and repository pattern implementation.
+            </div>
+        </div>
+
+        <!-- Git Flow Diagram -->
+        <div class="diagram-section">
+            <h2><i class="fas fa-code-branch"></i> Git Branching Strategy</h2>
+            <div class="diagram">
+                <div class="mermaid">
+gitGraph
+    commit
+    branch develop
+    checkout develop
+    commit
+    branch feature/login
+    checkout feature/login
+    commit
+    commit
+    checkout develop
+    merge feature/login
+    commit
+    branch hotfix/bug
+    checkout hotfix/bug
+    commit
+    checkout main
+    merge hotfix/bug
+    checkout develop
+    merge hotfix/bug
+    commit
+    checkout main
+    merge develop
+                </div>
+            </div>
+            <div class="diagram-description">
+                <strong>Overview:</strong> Git branching strategy showing feature branches, develop branch, hotfixes, and release merges to main branch.
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'base',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: true,
+                wrap: true
+            },
+            themeVariables: {
+                fontFamily: 'Geist, sans-serif',
+                fontSize: '16px',
+                primaryColor: '#ff6b00',
+                primaryTextColor: '#ffffff',
+                primaryBorderColor: '#ff6b00',
+                lineColor: '#666666',
+                secondaryColor: '#e0e0e0',
+                tertiaryColor: '#f5f5f5',
+                background: '#ffffff',
+                mainBkg: '#ff6b00',
+                nodeBorder: '#ff6b00',
+                clusterBkg: '#f5f5f5',
+                clusterBorder: '#666666',
+                titleColor: '#1a1a1a',
+                edgeLabelBackground: '#ffffff',
+                actorBkg: '#ff6b00',
+                actorBorder: '#ff6b00',
+                actorTextColor: '#ffffff',
+                actorLineColor: '#666666',
+                signalColor: '#666666',
+                signalTextColor: '#1a1a1a',
+                labelBoxBkgColor: '#e0e0e0',
+                labelBoxBorderColor: '#666666',
+                labelTextColor: '#1a1a1a',
+                loopTextColor: '#1a1a1a',
+                noteBorderColor: '#ff6b00',
+                noteBkgColor: '#fff3e0',
+                noteTextColor: '#1a1a1a',
+                activationBorderColor: '#ff6b00',
+                activationBkgColor: '#fff3e0',
+                sequenceNumberColor: '#ff6b00'
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,14 +1,16 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../core/constants/app_constants.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../student/student_dashboard.dart';
-import '../faculty/faculty_dashboard.dart';
-import '../hod/hod_dashboard.dart';
-import '../admin/admin_dashboard.dart';
+import '../../core/widgets/apple_pressable.dart';
+import '../../core/widgets/shadcn_button.dart';
 
+/// AttendX sign-in — iOS-style: one white card on a dimmed photo,
+/// generous whitespace, a single red accent and subtle entrance motion.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -16,41 +18,95 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
+  static const BorderRadius _cardRadius = BorderRadius.all(Radius.circular(24));
+
   final _emailCtrl = TextEditingController(text: 'admin@attendx.com');
   final _passCtrl = TextEditingController(text: 'admin123');
   final _formKey = GlobalKey<FormState>();
+
   bool _loading = false;
   bool _obscure = true;
   String? _error;
   String _selectedDemo = 'admin';
 
-  final _demoAccounts = [
-    {'role': 'admin', 'email': 'admin@attendx.com', 'pass': 'admin123', 'label': 'Admin'},
-    {'role': 'hod', 'email': 'hod@attendx.com', 'pass': 'hod123', 'label': 'HOD'},
-    {'role': 'faculty', 'email': 'faculty@attendx.com', 'pass': 'faculty123', 'label': 'Faculty'},
-    {'role': 'student', 'email': 'student@attendx.com', 'pass': 'student123', 'label': 'Student'},
+  late final AnimationController _entrance;
+  late final Animation<double> _cardOpacity;
+  late final Animation<Offset> _cardOffset;
+  late final Animation<double> _footerOpacity;
+
+  static const List<Map<String, String>> _demoAccounts = [
+    {
+      'role': 'admin',
+      'email': 'admin@attendx.com',
+      'pass': 'admin123',
+      'label': 'Admin',
+    },
+    {
+      'role': 'hod',
+      'email': 'hod@attendx.com',
+      'pass': 'hod123',
+      'label': 'HOD',
+    },
+    {
+      'role': 'faculty',
+      'email': 'faculty@attendx.com',
+      'pass': 'faculty123',
+      'label': 'Faculty',
+    },
+    {
+      'role': 'student',
+      'email': 'student@attendx.com',
+      'pass': 'student123',
+      'label': 'Student',
+    },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    )..forward();
+    _cardOpacity = _entrance.drive(
+      CurveTween(curve: const Interval(0, 0.7, curve: Curves.easeOutCubic)),
+    );
+    _cardOffset = _entrance.drive(
+      Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
+          .chain(CurveTween(curve: Curves.easeOutCubic)),
+    );
+    _footerOpacity = _entrance.drive(
+      CurveTween(curve: const Interval(0.4, 1, curve: Curves.easeOut)),
+    );
+  }
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _entrance.dispose();
     super.dispose();
   }
 
-  void _selectDemo(Map<String, dynamic> acc) {
+  void _selectDemo(Map<String, String> acc) {
+    FocusScope.of(context).unfocus();
     setState(() {
-      _selectedDemo = acc['role'] as String;
-      _emailCtrl.text = acc['email'] as String;
-      _passCtrl.text = acc['pass'] as String;
+      _selectedDemo = acc['role']!;
+      _emailCtrl.text = acc['email']!;
+      _passCtrl.text = acc['pass']!;
       _error = null;
     });
   }
 
   Future<void> _login() async {
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     final res = await AuthService.login(_emailCtrl.text.trim(), _passCtrl.text);
 
@@ -60,312 +116,410 @@ class _LoginScreenState extends State<LoginScreen> {
     if (res['success'] == true) {
       final role = res['role'] as String?;
       switch (role) {
-        case UserRole.student: _navigateWithTransition('/student'); break;
-        case UserRole.faculty: _navigateWithTransition('/faculty'); break;
-        case UserRole.hod:     _navigateWithTransition('/hod');     break;
-        case UserRole.admin:   _navigateWithTransition('/admin');   break;
-        default: setState(() => _error = 'Unknown role. Contact admin.');
+        case UserRole.student:
+          context.go('/student');
+          break;
+        case UserRole.faculty:
+          context.go('/faculty');
+          break;
+        case UserRole.hod:
+          context.go('/hod');
+          break;
+        case UserRole.admin:
+          context.go('/admin');
+          break;
+        default:
+          setState(() => _error = 'Unknown role. Contact admin.');
       }
     } else {
-      setState(() => _error = res['message'] ?? 'Login failed');
+      setState(() => _error = res['message'] as String? ?? 'Login failed');
     }
-  }
-
-  void _navigateWithTransition(String route) {
-    Widget destination;
-    switch (route) {
-      case '/student': destination = const StudentDashboard(); break;
-      case '/faculty': destination = const FacultyDashboard(); break;
-      case '/hod': destination = const HodDashboard(); break;
-      case '/admin': destination = const AdminDashboard(); break;
-      default: destination = const LoginScreen();
-    }
-
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => destination,
-        transitionsBuilder: (_, animation, __, child) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOutCubic,
-            )),
-            child: FadeTransition(opacity: animation, child: child),
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 600),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Dark system UI icons — the screen sits on a clean white background.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark,
+      child: _buildScaffold(),
+    );
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/loginscreenbg1.jpg'),
-            fit: BoxFit.cover,
+      backgroundColor: Colors.white,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Soft neutral glow so the white card reads on a white canvas.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFF7F7F8), Colors.white],
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ClipRRect(
-                    borderRadius: AppBorderRadius.glass,
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(28),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: AppBorderRadius.glass,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.25),
-                            width: 1.5,
-                          ),
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xxl,
+                  vertical: AppSpacing.section,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FadeTransition(
+                        opacity: _cardOpacity,
+                        child: SlideTransition(
+                          position: _cardOffset,
+                          child: _buildCard(),
                         ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryRed,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(Icons.school_rounded, color: Colors.white, size: 26),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        AppConstants.appName,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      Text(
-                                        'ERP Dashboard',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          color: Colors.white60,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 28),
-
-                              // Email
-                              TextFormField(
-                                controller: _emailCtrl,
-                                keyboardType: TextInputType.emailAddress,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: const Color(0xFF1A202C),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: 'Email',
-                                  labelStyle: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    color: Colors.grey[600],
-                                  ),
-                                  prefixIcon: Icon(Icons.email_outlined, size: 18, color: Colors.grey[600]),
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.92),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                                ),
-                                validator: (v) =>
-                                    v == null || !v.contains('@') ? 'Enter a valid email' : null,
-                              ),
-                              const SizedBox(height: 12),
-
-                              // Password
-                              TextFormField(
-                                controller: _passCtrl,
-                                obscureText: _obscure,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: const Color(0xFF1A202C),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  labelStyle: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    color: Colors.grey[600],
-                                  ),
-                                  prefixIcon: Icon(Icons.lock_outlined, size: 18, color: Colors.grey[600]),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscure ? Icons.visibility_off : Icons.visibility,
-                                      size: 18,
-                                      color: Colors.grey[600],
-                                    ),
-                                    onPressed: () => setState(() => _obscure = !_obscure),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.92),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                                ),
-                                validator: (v) =>
-                                    v == null || v.length < 6 ? 'Min 6 characters' : null,
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Error
-                              if (_error != null)
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.redDanger.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    _error!,
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.redDanger,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 16),
-
-                              // Sign In button
-                              ElevatedButton(
-                                onPressed: _loading ? null : _login,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryRed,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(35),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                child: _loading
-                                    ? const SizedBox(
-                                        height: 18,
-                                        width: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Text('Sign In',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                        )),
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              // Divider
-                              Row(
-                                children: [
-                                  Expanded(child: Divider(color: Colors.white.withOpacity(0.2))),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    child: Text(
-                                      'Demo Accounts',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        color: Colors.white60,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(child: Divider(color: Colors.white.withOpacity(0.2))),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-
-                              // Demo account pills
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                alignment: WrapAlignment.center,
-                                children: _demoAccounts.map((acc) {
-                                  final isActive = _selectedDemo == acc['role'];
-                                  return GestureDetector(
-                                    onTap: () => _selectDemo(acc),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: isActive ? AppColors.primaryRed : Colors.white.withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: isActive
-                                              ? AppColors.primaryRed
-                                              : Colors.white.withOpacity(0.2),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        acc['label'] as String,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                                          color: isActive ? Colors.white : Colors.white70,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      FadeTransition(
+                        opacity: _footerOpacity,
+                        child: Text(
+                          'AttendX — ERP Attendance System',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.neutralGray,
+                            letterSpacing: 0.2,
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xxl),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: _cardRadius,
+        border: Border.all(color: AppColors.border, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildBrandRow(),
+            const SizedBox(height: AppSpacing.section),
+            _buildEmailField(),
+            const SizedBox(height: AppSpacing.lg),
+            _buildPasswordField(),
+            _buildErrorBanner(),
+            const SizedBox(height: AppSpacing.xl),
+            _buildSignInButton(),
+            const SizedBox(height: AppSpacing.md),
+            _buildSignUpRow(),
+            const SizedBox(height: AppSpacing.xl),
+            _buildDemoSection(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrandRow() {
+    return Row(
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppColors.primaryRed,
+            borderRadius: AppBorderRadius.xl,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryRed.withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.school_rounded,
+            color: Colors.white,
+            size: 28,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.lg),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppConstants.appName,
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.4,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'ERP Dashboard',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmailField() {
+    return TextFormField(
+      controller: _emailCtrl,
+      keyboardType: TextInputType.emailAddress,
+      textInputAction: TextInputAction.next,
+      autocorrect: false,
+      enableSuggestions: false,
+      autofillHints: const [AutofillHints.email],
+      style: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: AppColors.textPrimary,
+      ),
+      decoration: const InputDecoration(
+        labelText: 'Email',
+        prefixIcon: Icon(
+          Icons.mail_outline_rounded,
+          size: 20,
+          color: AppColors.neutralGray,
+        ),
+      ),
+      validator: (v) =>
+          v == null || !v.contains('@') ? 'Enter a valid email' : null,
+      onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextFormField(
+      controller: _passCtrl,
+      obscureText: _obscure,
+      textInputAction: TextInputAction.done,
+      autofillHints: const [AutofillHints.password],
+      style: GoogleFonts.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: AppColors.textPrimary,
+      ),
+      decoration: InputDecoration(
+        labelText: 'Password',
+        prefixIcon: const Icon(
+          Icons.lock_outline_rounded,
+          size: 20,
+          color: AppColors.neutralGray,
+        ),
+        suffixIcon: IconButton(
+          tooltip: _obscure ? 'Show password' : 'Hide password',
+          onPressed: () => setState(() => _obscure = !_obscure),
+          icon: Icon(
+            _obscure
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+            size: 20,
+            color: AppColors.neutralGray,
+          ),
+        ),
+      ),
+      validator: (v) => v == null || v.length < 6 ? 'Min 6 characters' : null,
+      onFieldSubmitted: (_) {
+        if (!_loading) _login();
+      },
+    );
+  }
+
+  Widget _buildErrorBanner() {
+    final error = _error;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SizeTransition(
+          sizeFactor: animation,
+          axisAlignment: -1,
+          child: child,
+        ),
+      ),
+      child: error == null
+          ? const SizedBox.shrink(key: ValueKey<String>('no-error'))
+          : Container(
+              key: ValueKey<String>(error),
+              margin: const EdgeInsets.only(top: AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: const BoxDecoration(
+                color: AppColors.absentPill,
+                borderRadius: AppBorderRadius.md,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 16,
+                    color: AppColors.redDanger,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      error,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.redDanger,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Tap any role above to auto-fill credentials',
-                    style: GoogleFonts.inter(
-                      color: Colors.white.withOpacity(0.45),
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildSignInButton() {
+    return ShadcnButton(
+      text: 'Sign In',
+      variant: ShadcnButtonVariant.brand,
+      size: ShadcnButtonSize.lg,
+      fullWidth: true,
+      isLoading: _loading,
+      onPressed: _login,
+    );
+  }
+
+  Widget _buildSignUpRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'New to AttendX?',
+          style: GoogleFonts.inter(
+            fontSize: 12.5,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        TextButton(
+          onPressed: () => context.go('/signup'),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('Sign up'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDemoSection() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Divider(color: AppColors.border, height: 1),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Text(
+                'Demo accounts',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.neutralGray,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            const Expanded(
+              child: Divider(color: AppColors.border, height: 1),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          alignment: WrapAlignment.center,
+          children: _demoAccounts.map(_buildDemoPill).toList(),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Tap a role to auto-fill credentials',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            color: AppColors.neutralGray,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDemoPill(Map<String, String> acc) {
+    final isActive = _selectedDemo == acc['role'];
+    return ApplePressable(
+      onTap: () => _selectDemo(acc),
+      borderRadius: BorderRadius.circular(100),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: AppCurves.spring,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primaryRed : AppColors.zinc100,
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: isActive ? AppColors.primaryRed : AppColors.zinc200,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          acc['label']!,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+            color: isActive ? Colors.white : AppColors.textPrimary,
           ),
         ),
       ),
     );
   }
 }
+
