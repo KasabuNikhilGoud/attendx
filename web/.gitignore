@@ -1,0 +1,12 @@
+# AttendX web — keep secrets out of git
+.env
+.env.local
+.env.*.local
+/node_modules/
+/.next/
+/out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+.DS_Store

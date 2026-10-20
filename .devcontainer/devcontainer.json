@@ -1,0 +1,13 @@
+{
+  "name": "AttendX Web",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "AttendX web",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "cd web && npm install",
+  "remoteUser": "node"
+}
