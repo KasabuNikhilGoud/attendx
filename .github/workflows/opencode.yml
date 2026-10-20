@@ -1,0 +1,272 @@
+name: OpenCode AI (issues · PR review · security)
+
+# Issue-driven + AI-assisted pipeline:
+#   • new issue          → issue-triage agent posts an analysis report
+#   • PR opened/updated  → pr-reviewer agent posts a structured review
+#   • weekly (Mon 03:00) → security audit reported to a tracking issue
+#
+# Required secrets (repo → Settings → Secrets and variables → Actions):
+#   ANTHROPIC_API_KEY  or  OPENAI_API_KEY     → one of them powers the models
+#   OPENCODE_MODEL (optional)                 → e.g. anthropic/claude-sonnet-4-5
+# Without any key the triage/review jobs post a friendly setup note and the
+# pipeline never blocks merges.
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened, synchronize]
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: opencode-${{ github.event_name }}-${{ github.event.issue.number || github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ------------------------------------------------------------------
+  # 1. New issue → clean analysis & work plan
+  # ------------------------------------------------------------------
+  issue-triage:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install OpenCode CLI
+        run: npm install -g @opencode/cli@2
+
+      - name: Resolve model availability
+        id: key
+        env:
+          HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
+        run: |
+          if [ "$HAS_ANTHROPIC" = "true" ] || [ "$HAS_OPENAI" = "true" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Analyze issue (OpenCode)
+        if: steps.key.outputs.available == 'true'
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL || 'anthropic/claude-sonnet-4-5' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          mkdir -p .attendx-ai
+          printf 'Issue #%s — %s\n\n%s\n' "$ISSUE_NUMBER" "$ISSUE_TITLE" "$ISSUE_BODY" > .attendx-ai/issue.txt
+          opencode run --standalone --auto \
+            --model "$OPENCODE_MODEL" \
+            --agent issue-triage \
+            "Analyze the GitHub issue saved in .attendx-ai/issue.txt and produce your report." \
+            > .attendx-ai/report.md 2>.attendx-ai/run.log || {
+              echo "OpenCode run failed:" >&2
+              cat .attendx-ai/run.log >&2
+            }
+
+      - name: Post analysis comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          if [ -s .attendx-ai/report.md ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --body-file .attendx-ai/report.md
+          else
+            gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --body "⚠️ OpenCode analysis failed. Check the workflow run logs. Setup: add the ANTHROPIC_API_KEY (or OPENAI_API_KEY) secret and optionally OPENCODE_MODEL."
+          fi
+
+      - name: Setup hint (no API key configured)
+        if: steps.key.outputs.available == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --body "🤖 **OpenCode AI is not configured yet.** Add one of these repo secrets to enable automatic issue analysis and PR reviews: \`ANTHROPIC_API_KEY\` or \`OPENAI_API_KEY\` (optionally \`OPENCODE_MODEL\`). See docs/workflow.md."
+
+  # ------------------------------------------------------------------
+  # 2. Pull request → structured review comment
+  # ------------------------------------------------------------------
+  pr-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # pull_request checks out the merge commit of the PR ✓
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install OpenCode CLI
+        run: npm install -g @opencode/cli@2
+
+      - name: Resolve model availability
+        id: key
+        env:
+          HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
+        run: |
+          if [ "$HAS_ANTHROPIC" = "true" ] || [ "$HAS_OPENAI" = "true" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build review inputs
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_BRANCH: ${{ github.base_ref }}
+        run: |
+          mkdir -p .attendx-ai
+          git fetch --quiet origin "$BASE_BRANCH"
+          git diff --unified=20 "origin/${BASE_BRANCH}...HEAD" > .attendx-ai/diff.patch
+          {
+            printf 'PR #%s — %s\n\n' "$PR_NUMBER" "$PR_TITLE"
+            printf '%s\n' "$PR_BODY"
+          } > .attendx-ai/pr.txt
+
+      - name: Review PR (OpenCode)
+        if: steps.key.outputs.available == 'true'
+        env:
+          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL || 'anthropic/claude-sonnet-4-5' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          opencode run --standalone --auto \
+            --model "$OPENCODE_MODEL" \
+            --agent pr-reviewer \
+            "Review this pull request. Conventions: AGENTS.md and docs/environments.md. PR description: .attendx-ai/pr.txt. Full diff: .attendx-ai/diff.patch. Produce your review report now." \
+            > .attendx-ai/review.md 2>.attendx-ai/run.log || {
+              echo "OpenCode run failed:" >&2
+              cat .attendx-ai/run.log >&2
+            }
+
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          if [ -s .attendx-ai/review.md ]; then
+            gh pr review "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --comment --body-file .attendx-ai/review.md || \
+            gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --body-file .attendx-ai/review.md
+          else
+            gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+              --body "⚠️ OpenCode review failed. Check the workflow run logs. Setup: add the ANTHROPIC_API_KEY (or OPENAI_API_KEY) secret and optionally OPENCODE_MODEL."
+          fi
+
+      - name: Setup hint (no API key configured)
+        if: steps.key.outputs.available == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --body "🤖 **OpenCode AI review is not configured yet.** Add the \`ANTHROPIC_API_KEY\` (or \`OPENAI_API_KEY\`) repo secret. See docs/workflow.md."
+
+  # ------------------------------------------------------------------
+  # 3. Weekly security & vulnerability audit → tracking issue report
+  # ------------------------------------------------------------------
+  security-audit:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Audit web dependencies (npm)
+        run: |
+          cd web
+          npm install --no-audit --no-fund 2>&1 | tail -1
+          npm audit --json > ../.attendx-ai-npm-audit.json || true
+          echo "### npm audit" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Static analysis (Flutter)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.4"
+          channel: stable
+          cache: true
+
+      - name: flutter analyze
+        run: |
+          cd app
+          flutter pub get
+          flutter analyze --no-pub > ../.attendx-ai-flutter-analyze.txt 2>&1 || true
+
+      - name: Secret-pattern scan (tracked files)
+        run: |
+          {
+            echo "### Secret-pattern scan"
+            if git grep -nIE "(sk_live_[A-Za-z0-9]{16,}|sbp_[A-Za-z0-9]{20,}|supabase_service_role|-----BEGIN (RSA |EC )?PRIVATE KEY-----)" -- . ':!*.md' ':!.github/**'; then
+              echo "🔴 POSSIBLE SECRET MATERIAL FOUND — investigate immediately."
+              exit 1
+            else
+              echo "✅ no obvious secret patterns tracked in git"
+            fi
+          } | tee .attendx-ai-secret-scan.txt
+
+      - name: Compose report
+        id: report
+        run: |
+          {
+            echo "## 🔐 AttendX security audit — $(date -u '+%Y-%m-%d')"
+            echo ""
+            echo "### Dependency vulnerabilities (web)"
+            jq -r '"**\( .metadata.vulnerabilities.total )** vulnerabilities: high **\( .metadata.vulnerabilities.high )**, critical **\( .metadata.vulnerabilities.critical )**, moderate **\( .metadata.vulnerabilities.moderate )**, low **\( .metadata.vulnerabilities.low )**"' .attendx-ai-npm-audit.json
+            echo ""
+            jq -r '.vulnerabilities | to_entries[:5][] | "- **\(.key)** (\(.value.severity)) — \(.value.via[0].title // "see advisory")"' .attendx-ai-npm-audit.json 2>/dev/null || echo "_none reported_"
+            echo ""
+            echo "### Flutter static analysis"
+            echo '```'
+            tail -n 20 .attendx-ai-flutter-analyze.txt
+            echo '```'
+            echo ""
+            cat .attendx-ai-secret-scan.txt
+            echo ""
+            echo "_Automated weekly report — run \`OpenCode AI\` → \`security-audit\` job. Remediate criticals/highs on \`develop\` first._"
+          } > .attendx-ai-security-report.md
+
+      - name: Post to tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE=$(gh issue list --repo "$GITHUB_REPOSITORY" --label security-audit --state open --json number --jq '.[0].number' || true)
+          if [ -z "$ISSUE" ]; then
+            ISSUE=$(gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "🔐 Security audit tracker" \
+              --label "security,security-audit" \
+              --body "Automated weekly audits from the \`OpenCode AI\` workflow post their reports below. Keep this issue open; close superseded reports only after the fixes reach \`main\`.")
+          fi
+          gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body-file .attendx-ai-security-report.md

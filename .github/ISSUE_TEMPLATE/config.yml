@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "Environment & deployment runbook"
+    url: "https://github.com/KasabuNikhilGoud/attendx/blob/main/docs/environments.md"
+    about: "How test / staging / production work and how code is promoted."
+  - name: "How we build (issue → branch → PR → review)"
+    url: "https://github.com/KasabuNikhilGoud/attendx/blob/main/docs/workflow.md"
+    about: "The full issue-driven development process."

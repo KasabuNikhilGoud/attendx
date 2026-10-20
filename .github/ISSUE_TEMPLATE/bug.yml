@@ -1,0 +1,49 @@
+name: "🐞 Bug report"
+description: "Something is broken or behaves wrongly"
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Where did it happen?"
+      options:
+        - "web (Next.js dashboard)"
+        - "app (Flutter mobile)"
+        - "supabase (schema/seed/RLS)"
+        - "CI/CD"
+    validations:
+      required: true
+  - type: dropdown
+    id: env
+    attributes:
+      label: "Which environment?"
+      options:
+        - "test (develop — fake data)"
+        - "demo mode (no Supabase configured)"
+        - "staging"
+        - "production"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: "Steps to reproduce"
+      placeholder: |
+        1. Sign in as student@attendx.com
+        2. Open dashboard/student
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected vs actual"
+      description: "What should happen, what actually happens."
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Logs / screenshots"
+      description: "Console output, CI logs, screenshots (NO secrets or API keys)."
