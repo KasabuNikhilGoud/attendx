@@ -81,13 +81,7 @@ merge `main` back into `develop` so the fix is not lost.
 | Project rules for every agent | `AGENTS.md` + `opencode.json` | always |
 | Manual AI help locally | run `opencode` in the repo | CLI (free models included) |
 
-**One-time setup** so the AI jobs actually run:
-
-```text
-Repo → Settings → Secrets and variables → Actions
-  ANTHROPIC_API_KEY = <your Anthropic key>      (or OPENAI_API_KEY)
-  OPENCODE_MODEL    = anthropic/claude-sonnet-4-5   (optional override)
-```
-
-Without a key, triage/review jobs post a setup hint and everything else
-keeps working.
+**No setup needed** — the default model is a **free OpenCode Zen model**
+(`opencode/glm-5.3-flash-free`, keyless). Optionally set the
+`OPENCODE_MODEL` repo secret to use another model (with its provider key
+for premium ones).
