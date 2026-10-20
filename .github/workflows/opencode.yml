@@ -5,10 +5,11 @@ name: OpenCode AI (issues · PR review · security)
 #   • PR opened/updated  → pr-reviewer agent posts a structured review
 #   • weekly (Mon 03:00) → security audit reported to a tracking issue
 #
-# Default model: opencode/glm-5.3-flash-free — OpenCode Zen free tier, no
-# login/API key required. Optionally set the OPENCODE_MODEL repo secret to
-# use any other model (add its provider key, e.g. ANTHROPIC_API_KEY, if it
-# is not a free one). The pipeline never blocks merges.
+# Model selection is DYNAMIC: `.github/scripts/ai-run.sh` discovers the
+# currently available free OpenCode Zen models (`opencode models`), orders
+# them by preference and falls back across ALL of them — so a single model
+# rotating away or rate-limiting never breaks the bot. Set the
+# OPENCODE_MODEL secret to force one exact model. Never blocks merges.
 
 on:
   issues:
@@ -28,9 +29,6 @@ concurrency:
   group: opencode-${{ github.event_name }}-${{ github.event.issue.number || github.event.number || github.ref }}
   cancel-in-progress: true
 
-env:
-  OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL || 'opencode/glm-5.3-flash-free' }}
-
 jobs:
   # ------------------------------------------------------------------
   # 1. New issue → clean analysis & work plan
@@ -38,7 +36,7 @@ jobs:
   issue-triage:
     if: github.event_name == 'issues'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -49,37 +47,43 @@ jobs:
       - name: Install OpenCode CLI
         run: npm install -g @opencode/cli@2
 
-      - name: Analyze issue (OpenCode)
+      - name: Analyze issue (OpenCode — best free model)
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
+          # Optional explicit model override; empty = dynamic free-model failover
+          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL }}
           # Optional provider keys — only needed for premium (non-free) models
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           mkdir -p .attendx-ai
           printf 'Issue #%s — %s\n\n%s\n' "$ISSUE_NUMBER" "$ISSUE_TITLE" "$ISSUE_BODY" > .attendx-ai/issue.txt
-          opencode run --standalone --auto \
-            --model "$OPENCODE_MODEL" \
-            --agent issue-triage \
+          bash .github/scripts/ai-run.sh issue-triage \
             "Analyze the GitHub issue saved in .attendx-ai/issue.txt and produce your report." \
-            > .attendx-ai/report.md 2>.attendx-ai/run.log || {
-              echo "OpenCode run failed:" >&2
-              cat .attendx-ai/run.log >&2
-            }
+            .attendx-ai/report.md || true
 
       - name: Post analysis comment
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          if [ -s .attendx-ai/report.md ]; then
+          # Success = report present AND the script's model marker exists
+          # (a timed-out partial report is deleted by the script itself).
+          if [ -s .attendx-ai/report.md ] && [ -s .attendx-ai/model-used.txt ]; then
+            M=$(cat .attendx-ai/model-used.txt 2>/dev/null || true)
+            {
+              cat .attendx-ai/report.md
+              if [ -n "$M" ]; then
+                printf '\n---\n🤖 _OpenCode AI analysis · model: `%s` (free tier, keyless, auto-failover)_\n' "$M"
+              fi
+            } > .attendx-ai/final.md
             gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --body-file .attendx-ai/report.md
+              --body-file .attendx-ai/final.md
           else
             gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --body "⚠️ OpenCode analysis failed. Check the workflow run logs (model: \`$OPENCODE_MODEL\`)."
+              --body "⚠️ OpenCode analysis failed — every available free model was tried and none responded. Check the workflow run logs, or pin a working model via the \`OPENCODE_MODEL\` secret."
           fi
 
   # ------------------------------------------------------------------
@@ -88,7 +92,7 @@ jobs:
   pr-review:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -117,34 +121,40 @@ jobs:
             printf '%s\n' "$PR_BODY"
           } > .attendx-ai/pr.txt
 
-      - name: Review PR (OpenCode)
+      - name: Review PR (OpenCode — best free model)
         env:
+          # Optional explicit model override; empty = dynamic free-model failover
+          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL }}
           # Optional provider keys — only needed for premium (non-free) models
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          opencode run --standalone --auto \
-            --model "$OPENCODE_MODEL" \
-            --agent pr-reviewer \
+          bash .github/scripts/ai-run.sh pr-reviewer \
             "Review this pull request. Conventions: AGENTS.md and docs/environments.md. PR description: .attendx-ai/pr.txt. Full diff: .attendx-ai/diff.patch. Produce your review report now." \
-            > .attendx-ai/review.md 2>.attendx-ai/run.log || {
-              echo "OpenCode run failed:" >&2
-              cat .attendx-ai/run.log >&2
-            }
+            .attendx-ai/review.md || true
 
       - name: Post review comment
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.number }}
         run: |
-          if [ -s .attendx-ai/review.md ]; then
+          # Success = review present AND the script's model marker exists
+          # (a timed-out partial review is deleted by the script itself).
+          if [ -s .attendx-ai/review.md ] && [ -s .attendx-ai/model-used.txt ]; then
+            M=$(cat .attendx-ai/model-used.txt 2>/dev/null || true)
+            {
+              cat .attendx-ai/review.md
+              if [ -n "$M" ]; then
+                printf '\n---\n🤖 _OpenCode AI review · model: `%s` (free tier, keyless, auto-failover)_\n' "$M"
+              fi
+            } > .attendx-ai/final.md
             gh pr review "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --comment --body-file .attendx-ai/review.md || \
+              --comment --body-file .attendx-ai/final.md || \
             gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --body-file .attendx-ai/review.md
+              --body-file .attendx-ai/final.md
           else
             gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --body "⚠️ OpenCode review failed. Check the workflow run logs (model: \`$OPENCODE_MODEL\`)."
+              --body "⚠️ OpenCode review failed — every available free model was tried and none responded. Check the workflow run logs, or pin a working model via the \`OPENCODE_MODEL\` secret."
           fi
 
   # ------------------------------------------------------------------

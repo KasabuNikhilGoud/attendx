@@ -81,7 +81,8 @@ merge `main` back into `develop` so the fix is not lost.
 | Project rules for every agent | `AGENTS.md` + `opencode.json` | always |
 | Manual AI help locally | run `opencode` in the repo | CLI (free models included) |
 
-**No setup needed** — the default model is a **free OpenCode Zen model**
-(`opencode/glm-5.3-flash-free`, keyless). Optionally set the
-`OPENCODE_MODEL` repo secret to use another model (with its provider key
-for premium ones).
+**No setup needed** — the bot discovers the currently available **free
+OpenCode Zen models** at runtime and fails over across all of them
+(`.github/scripts/ai-run.sh`), so one model rotating away or rate-limiting
+never breaks it. Optionally pin an exact model via the `OPENCODE_MODEL`
+repo secret (with its provider key for premium ones).
