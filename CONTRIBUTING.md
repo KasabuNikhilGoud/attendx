@@ -7,8 +7,11 @@ requests**. Read this before opening your first PR.
 
 > **All pull requests go into `develop` (the TEST branch).**
 >
-> **Nobody — ever — opens a PR directly into `main` (production).** `main`
-> only moves through the promotion chain after a validated staging run.
+> **Nobody opens a PR directly into `main` (production)** — `main` only
+> moves through the promotion chain after a validated staging run. The one
+> exception: `hotfix/<slug>` branches from `main` may PR straight back
+> into `main` during a production incident (then merge `main` back into
+> `develop`).
 
 ```text
 your branch ──PR──> develop (TEST) ──PR──> staging ──PR──> main (PROD)
