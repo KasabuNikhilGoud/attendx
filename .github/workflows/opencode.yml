@@ -36,7 +36,7 @@ jobs:
   issue-triage:
     if: github.event_name == 'issues'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -69,7 +69,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          if [ -s .attendx-ai/report.md ]; then
+          # Success = report present AND the script's model marker exists
+          # (a timed-out partial report is deleted by the script itself).
+          if [ -s .attendx-ai/report.md ] && [ -s .attendx-ai/model-used.txt ]; then
             M=$(cat .attendx-ai/model-used.txt 2>/dev/null || true)
             {
               cat .attendx-ai/report.md
@@ -90,7 +92,7 @@ jobs:
   pr-review:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -136,7 +138,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.number }}
         run: |
-          if [ -s .attendx-ai/review.md ]; then
+          # Success = review present AND the script's model marker exists
+          # (a timed-out partial review is deleted by the script itself).
+          if [ -s .attendx-ai/review.md ] && [ -s .attendx-ai/model-used.txt ]; then
             M=$(cat .attendx-ai/model-used.txt 2>/dev/null || true)
             {
               cat .attendx-ai/review.md

@@ -37,7 +37,9 @@ if [ -n "${OPENCODE_MODEL:-}" ]; then
   candidates+=("$OPENCODE_MODEL")
 else
   # 1. Discover currently listed free models (keyless, public catalog).
-  avail="$(opencode models 2>/dev/null | grep -E '^opencode/.*free' || true)"
+  #    `awk '{print $1}'` normalizes rows to the bare model id in case the
+  #    listing ever grows extra columns/padding.
+  avail="$(opencode models 2>/dev/null | awk '{print $1}' | grep -E '^opencode/.*free' || true)"
 
   # 2. Preferred models that are available right now.
   for m in "${PREFER[@]}"; do
@@ -54,22 +56,38 @@ else
     [ "$dup" -eq 0 ] && candidates+=("$m")
   done <<<"$avail"
 
-  # 4. Discovery failed (network hiccup)? Still try the preference list.
-  [ ${#candidates[@]} -eq 0 ] && candidates=("${PREFER[@]}")
+  # 4. Safety net: preferred models that were NOT listed still get tried
+  #    last — covers malformed listings and rotation back into service.
+  for m in "${PREFER[@]}"; do
+    dup=0
+    for c in ${candidates[@]+"${candidates[@]}"}; do
+      [ "$c" = "$m" ] && dup=1 && break
+    done
+    [ "$dup" -eq 0 ] && candidates+=("$m")
+  done
+
+  # 5. Hard cap on attempts so worst-case retries fit inside the job
+  #    timeout (5 models x 4 min = 20 min; jobs allow 25 min).
+  if [ ${#candidates[@]} -gt 5 ]; then
+    candidates=("${candidates[@]:0:5}")
+  fi
 fi
 
 echo "[ai-run] candidates: ${candidates[*]}" >&2
 
 for m in "${candidates[@]}"; do
   echo "[ai-run] trying model: $m" >&2
-  # 5-minute cap per model so one hung model doesn't eat the whole job.
-  if timeout 300 opencode run --standalone --auto \
+  # 4-minute cap per model so one hung model doesn't eat the whole job.
+  if timeout 240 opencode run --standalone --auto \
       --model "$m" --agent "$AGENT" "$PROMPT" >"$OUT" 2>"$LOG" \
       && [ -s "$OUT" ]; then
     echo "[ai-run] success with $m" >&2
     printf '%s' "$m" > "$DIR/model-used.txt"
     exit 0
   fi
+  # Never leave partial output behind — the post step treats its absence
+  # as "all models failed".
+  rm -f "$OUT"
   echo "[ai-run] model $m failed:" >&2
   tail -n 5 "$LOG" 2>/dev/null >&2 || true
 done
