@@ -114,8 +114,8 @@ The **OpenCode AI** workflow (`.github/workflows/opencode.yml`):
        (`app/.env.test`, `web/.env.local`) — never commit them.
 4. [ ] Repo secrets → `Actions`: `SUPABASE_URL_TEST/_STAGING/_PRODUCTION` +
        `ANON_KEY_*` (APK builds). The AI workflows need **no key** — they
-       run on a free OpenCode Zen model by default (optionally set
-       `OPENCODE_MODEL` for a premium model).
+       auto-pick the best available free OpenCode Zen model and fail over
+       across all of them (optionally pin one via `OPENCODE_MODEL`).
 5. [ ] Branch protection already on `main`/`staging` (PRs required).
 
 ## Stack
