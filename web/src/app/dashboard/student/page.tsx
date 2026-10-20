@@ -41,6 +41,10 @@ export default function StudentDashboard() {
   const overall = held > 0 ? Math.round((attended * 1000) / held) / 10 : 0;
   const flagged = reports.filter((r) => r.percent < 75);
 
+  const held30 = reports.reduce((a, r) => a + (r.recent?.held ?? 0), 0);
+  const attended30 = reports.reduce((a, r) => a + (r.recent?.attended ?? 0), 0);
+  const overall30 = held30 > 0 ? Math.round((attended30 * 1000) / held30) / 10 : 0;
+
   if (loading) return <Loading />;
 
   return (
@@ -62,25 +66,37 @@ export default function StudentDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Overall" value={`${overall}%`} hint={`${attended} of ${held} sessions`} />
+        <Stat
+          label="Last 30 days"
+          value={held30 > 0 ? `${overall30}%` : "—"}
+          hint={held30 > 0 ? `${attended30} of ${held30} recent sessions` : "no recent sessions"}
+        />
         <Stat label="Subjects" value={reports.length} />
-        <Stat label="Gate" value={overall >= 75 ? "Clear" : "At risk"} hint="75% minimum required" />
       </div>
 
       <div className="mt-4 grid gap-4">
         {reports.map((r) => (
           <Card key={r.subject_code}>
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2 flex items-center justify-between gap-3">
               <div>
                 <p className="font-semibold text-ink">{r.subject_name}</p>
                 <p className="text-xs text-zinc-500">{r.subject_code}</p>
               </div>
-              <Badge tone={r.percent >= 75 ? "green" : r.percent >= 60 ? "amber" : "red"}>
-                {Math.round(r.percent * 10) / 10}%
-              </Badge>
+              <div className="flex items-center gap-2">
+                {r.recent ? (
+                  <Badge tone={r.recent.percent >= 75 ? "green" : r.recent.percent >= 60 ? "amber" : "red"}>
+                    30d {arrow(r.recent.percent - r.percent)} {r.recent.percent}%
+                  </Badge>
+                ) : null}
+                <Badge tone={r.percent >= 75 ? "green" : r.percent >= 60 ? "amber" : "red"}>
+                  {Math.round(r.percent * 10) / 10}%
+                </Badge>
+              </div>
             </div>
             <PercentBar percent={r.percent} />
             <p className="mt-2 text-xs text-zinc-500">
               attended {r.attended} of {r.held} held sessions
+              {r.recent ? ` · ${r.recent.attended}/${r.recent.held} in the last 30 days` : ""}
             </p>
           </Card>
         ))}
@@ -111,4 +127,11 @@ function Loading() {
       Loading attendance…
     </div>
   );
+}
+
+/** Trend arrow: 30-day vs all-time. */
+function arrow(delta: number): string {
+  if (delta >= 1) return "↑";
+  if (delta <= -1) return "↓";
+  return "→";
 }

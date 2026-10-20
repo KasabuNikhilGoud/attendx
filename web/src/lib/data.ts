@@ -18,6 +18,7 @@ import {
   DEMO_SUBJECT_REPORTS,
   DEMO_USERS,
   type DeptSummary,
+  type RecentStat,
   type SessionRow,
   type SubjectReport,
 } from "./demo";
@@ -96,7 +97,7 @@ export async function logout(): Promise<void> {
 const validRole = (r: string): Role =>
   r === "student" || r === "faculty" || r === "hod" || r === "admin" ? (r as Role) : "student";
 
-/** Per-subject attendance percentages for one student. */
+/** Per-subject attendance percentages for one student (all-time + 30-day rolling). */
 export async function subjectReports(studentId: string): Promise<SubjectReport[]> {
   if (isDemoMode || !supabase) return DEMO_SUBJECT_REPORTS;
 
@@ -105,7 +106,62 @@ export async function subjectReports(studentId: string): Promise<SubjectReport[]
     .select("subject_code, subject_name, attended, held, percent")
     .eq("student_id", studentId);
   if (error) throw new Error(error.message);
-  return (data ?? []) as SubjectReport[];
+
+  const recent = await recentBySubject(studentId);
+  return ((data ?? []) as SubjectReport[]).map((r) => ({
+    ...r,
+    recent: recent.get(r.subject_code),
+  }));
+}
+
+/**
+ * Rolling 30-day attendance per subject, computed from submitted
+ * attendance_records (present + late count as attended).
+ */
+async function recentBySubject(studentId: string): Promise<Map<string, RecentStat>> {
+  if (!supabase) return new Map();
+
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+  const res = await supabase
+    .from("attendance_records")
+    .select(
+      `status,
+       session:session_id!inner ( session_date, subject:subject_id ( name, code ) )`
+    )
+    .eq("student_id", studentId)
+    .gte("session.session_date", since);
+  if (res.error) throw new Error(res.error.message);
+
+  interface RawRollingRow {
+    status: string;
+    session: {
+      session_date: string;
+      subject: { name: string; code: string } | { name: string; code: string }[] | null;
+    } | null;
+  }
+
+  const stats = new Map<string, { attended: number; held: number }>();
+  for (const r of (res.data ?? []) as unknown as RawRollingRow[]) {
+    const subject = firstOf<{ name: string; code: string }>(r.session?.subject);
+    if (!subject?.code) continue;
+    const cur = stats.get(subject.code) ?? { attended: 0, held: 0 };
+    cur.held += 1;
+    if (r.status === "present" || r.status === "late") cur.attended += 1;
+    stats.set(subject.code, cur);
+  }
+
+  const map = new Map<string, RecentStat>();
+  for (const [code, s] of stats) {
+    map.set(code, {
+      attended: s.attended,
+      held: s.held,
+      percent: s.held > 0 ? Math.round((s.attended * 1000) / s.held) / 10 : 0,
+    });
+  }
+  return map;
 }
 
 /** PostgREST embeds can arrive as objects or arrays — normalize to one. */
