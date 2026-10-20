@@ -66,19 +66,27 @@ export const DEMO_USERS: DemoUser[] = [
   },
 ];
 
+export interface RecentStat {
+  attended: number;
+  held: number;
+  percent: number;
+}
+
 export interface SubjectReport {
   subject_code: string;
   subject_name: string;
   attended: number;
   held: number;
   percent: number;
+  /** Rolling 30-day window (demo mirrors the live computation shape). */
+  recent?: RecentStat;
 }
 
 export const DEMO_SUBJECT_REPORTS: SubjectReport[] = [
-  { subject_code: "CS201", subject_name: "Data Structures", attended: 24, held: 30, percent: 80.0 },
-  { subject_code: "CS202", subject_name: "Operating Systems", attended: 26, held: 32, percent: 81.3 },
-  { subject_code: "CS203", subject_name: "Database Management Systems", attended: 22, held: 31, percent: 71.0 },
-  { subject_code: "CS204", subject_name: "Software Engineering", attended: 28, held: 32, percent: 87.5 },
+  { subject_code: "CS201", subject_name: "Data Structures", attended: 24, held: 30, percent: 80.0, recent: { attended: 10, held: 13, percent: 76.9 } },
+  { subject_code: "CS202", subject_name: "Operating Systems", attended: 26, held: 32, percent: 81.3, recent: { attended: 11, held: 13, percent: 84.6 } },
+  { subject_code: "CS203", subject_name: "Database Management Systems", attended: 22, held: 31, percent: 71.0, recent: { attended: 9, held: 14, percent: 64.3 } },
+  { subject_code: "CS204", subject_name: "Software Engineering", attended: 28, held: 32, percent: 87.5, recent: { attended: 12, held: 13, percent: 92.3 } },
 ];
 
 export interface SessionRow {

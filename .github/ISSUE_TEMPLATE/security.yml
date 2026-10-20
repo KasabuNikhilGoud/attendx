@@ -1,0 +1,52 @@
+name: "🔐 Security concern"
+description: "Vulnerability, pentest finding, dependency CVE or hardening idea"
+title: "security: "
+labels: ["security"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: "Type"
+      options:
+        - "Dependency vulnerability (audit/CVE)"
+        - "Auth / RLS / access-control"
+        - "Secrets handling"
+        - "Injection (XSS/SQL/etc.)"
+        - "Hardening idea / pentest follow-up"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Area"
+      options:
+        - "web"
+        - "app"
+        - "supabase"
+        - "CI/CD / repository config"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: "Finding"
+      description: "What is weak and how could it be abused? Keep it factual."
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: "Impact"
+      description: "Worst realistic outcome (data exposure, privilege escalation, DoS…)."
+  - type: textarea
+    id: remediation
+    attributes:
+      label: "Proposed fix"
+      description: "Your suggestion for the remediation PR."
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: "Confirmation"
+      options:
+        - label: "I did not include any real secrets, keys or passwords in this issue"
+          required: true
