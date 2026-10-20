@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/config/app_env.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/shadcn_badge.dart';
 
@@ -21,11 +23,20 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _controller;
   late final Animation<double> _fade;
   late final Animation<double> _scale;
+  late final String? _envLabel;
   Timer? _timer;
+
+  /// Which non-production world this build is touching, for the badge:
+  /// TEST DATABASE / STAGING / DEMO MODE. Hidden on production.
+  String? _resolveEnvLabel() {
+    if (!SupabaseService.isReady) return 'DEMO MODE';
+    return AppEnvConfig.badgeLabel;
+  }
 
   @override
   void initState() {
     super.initState();
+    _envLabel = _resolveEnvLabel();
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 750),
@@ -101,6 +112,20 @@ class _SplashScreenState extends State<SplashScreen>
                       fontSize: 11.5,
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     ),
+                    if (_envLabel != null) ...[
+                      const SizedBox(height: 6),
+                      ShadcnBadge(
+                        label: _envLabel!,
+                        variant: switch (_envLabel) {
+                          'STAGING' => ShadcnBadgeVariant.info,
+                          'DEMO MODE' => ShadcnBadgeVariant.outline,
+                          _ => ShadcnBadgeVariant.warning,
+                        },
+                        fontSize: 10.5,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 3),
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -1,0 +1,45 @@
+name: Quality (PR)
+
+# Runs on every PR targeting any environment branch.
+# Blocks the merge if `flutter test` fails.
+
+on:
+  pull_request:
+    branches: [develop, staging, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: flutter test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: stable
+          cache: true
+
+      # pubspec bundles `.env` as an asset; repo carries .env.example
+      - name: Copy .env asset for the build
+        run: cp .env.example .env
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Static analysis (non-blocking for now)
+        run: flutter analyze
+        continue-on-error: true
+
+      - name: flutter test
+        run: flutter test

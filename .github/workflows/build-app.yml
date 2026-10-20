@@ -1,0 +1,125 @@
+name: Build & Deploy
+
+# Branch → environment mapping (docs/environments.md):
+#   push develop        → TEST build      (attendx-test,     fake data)
+#   push staging        → STAGING build   (attendx-staging,  no users)
+#   push tag v*         → PRODUCTION build (attendx-prod,    real users)
+#
+# Required GitHub repo secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL_TEST | SUPABASE_ANON_KEY_TEST
+#   SUPABASE_URL_STAGING | SUPABASE_ANON_KEY_STAGING
+#   SUPABASE_URL_PRODUCTION | SUPABASE_ANON_KEY_PRODUCTION
+# Missing secrets simply produce a demo-mode APK (safe fallback).
+
+on:
+  push:
+    branches: [develop, staging]
+    tags: ['v*']
+
+permissions:
+  contents: write   # needed for the production tag release
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    if: github.ref == 'refs/heads/develop'
+    name: TEST APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Copy .env asset for the build
+        run: cp .env.example .env
+      - run: flutter pub get
+      - run: flutter test
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL_TEST }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY_TEST }} \
+            --dart-define=APP_ENV=test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: attendx-test-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+
+  build-staging:
+    if: github.ref == 'refs/heads/staging'
+    name: STAGING APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Copy .env asset for the build
+        run: cp .env.example .env
+      - run: flutter pub get
+      - run: flutter test
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL_STAGING }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY_STAGING }} \
+            --dart-define=APP_ENV=staging
+      - uses: actions/upload-artifact@v4
+        with:
+          name: attendx-staging-apk
+          path: app/build/app/outputs/flutter-apk/app-release.apk
+
+  production-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    name: PRODUCTION release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Copy .env asset for the build
+        run: cp .env.example .env
+      - run: flutter pub get
+      - run: flutter test
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL_PRODUCTION }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY_PRODUCTION }} \
+            --dart-define=APP_ENV=production
+      - name: GitHub Release (tag → production)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/app/outputs/flutter-apk/app-release.apk
+          generate_release_notes: true

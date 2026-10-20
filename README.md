@@ -46,19 +46,27 @@ attendx/
 ## Quickstart
 
 ```bash
-# 1. Supabase: create project, run supabase/migrations/*.sql in order
+# 1. Supabase: create a project → SQL Editor → run supabase/schema.sql
+#    (3 projects for test / staging / production — see docs/environments.md)
 
-# 2. Web
-cd web
-npm install
-cp .env.local.example .env.local  # fill keys
-npm run dev
-
-# 3. App
+# 2. App
 cd app
 flutter pub get
-# set keys in lib/core/constants/app_constants.dart
-flutter run
+flutter run --dart-define-from-file=.env.test
 ```
 
-Demo logins: `admin@attendx.com` / `hod@` / `faculty@` / `student@` + role123 (e.g. `admin123`).
+Demo logins: `admin@attendx.com` / `hod@` / `faculty@` / `student@` + role123
+(e.g. `admin123`). They exist after running `supabase/seed/seed_test.sql`
+on the **test** project.
+
+## Environments
+
+| Environment | Branch | Supabase project | Data |
+|---|---|---|---|
+| Test | `develop` | `attendx-test` | fake users + dummy data |
+| Main (Staging) | `staging` | `attendx-staging` | schema only + bootstrap admin |
+| Production | `main` | `attendx-prod` | real users |
+
+Full runbook: [`docs/environments.md`](docs/environments.md) — includes
+CI/CD (GitHub Actions) build-per-environment and the promotion flow
+`develop → staging → tag → main`.
