@@ -1,15 +1,14 @@
 name: OpenCode AI (issues · PR review · security)
 
-# Issue-driven + AI-assisted pipeline:
+# Issue-driven + AI-assisted pipeline — works OUT OF THE BOX, no API key needed:
 #   • new issue          → issue-triage agent posts an analysis report
 #   • PR opened/updated  → pr-reviewer agent posts a structured review
 #   • weekly (Mon 03:00) → security audit reported to a tracking issue
 #
-# Required secrets (repo → Settings → Secrets and variables → Actions):
-#   ANTHROPIC_API_KEY  or  OPENAI_API_KEY     → one of them powers the models
-#   OPENCODE_MODEL (optional)                 → e.g. anthropic/claude-sonnet-4-5
-# Without any key the triage/review jobs post a friendly setup note and the
-# pipeline never blocks merges.
+# Default model: opencode/glm-5.3-flash-free — OpenCode Zen free tier, no
+# login/API key required. Optionally set the OPENCODE_MODEL repo secret to
+# use any other model (add its provider key, e.g. ANTHROPIC_API_KEY, if it
+# is not a free one). The pipeline never blocks merges.
 
 on:
   issues:
@@ -29,6 +28,9 @@ concurrency:
   group: opencode-${{ github.event_name }}-${{ github.event.issue.number || github.event.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL || 'opencode/glm-5.3-flash-free' }}
+
 jobs:
   # ------------------------------------------------------------------
   # 1. New issue → clean analysis & work plan
@@ -47,25 +49,12 @@ jobs:
       - name: Install OpenCode CLI
         run: npm install -g @opencode/cli@2
 
-      - name: Resolve model availability
-        id: key
-        env:
-          HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
-          HAS_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
-        run: |
-          if [ "$HAS_ANTHROPIC" = "true" ] || [ "$HAS_OPENAI" = "true" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Analyze issue (OpenCode)
-        if: steps.key.outputs.available == 'true'
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
-          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL || 'anthropic/claude-sonnet-4-5' }}
+          # Optional provider keys — only needed for premium (non-free) models
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -90,17 +79,8 @@ jobs:
               --body-file .attendx-ai/report.md
           else
             gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --body "⚠️ OpenCode analysis failed. Check the workflow run logs. Setup: add the ANTHROPIC_API_KEY (or OPENAI_API_KEY) secret and optionally OPENCODE_MODEL."
+              --body "⚠️ OpenCode analysis failed. Check the workflow run logs (model: \`$OPENCODE_MODEL\`)."
           fi
-
-      - name: Setup hint (no API key configured)
-        if: steps.key.outputs.available == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
-            --body "🤖 **OpenCode AI is not configured yet.** Add one of these repo secrets to enable automatic issue analysis and PR reviews: \`ANTHROPIC_API_KEY\` or \`OPENAI_API_KEY\` (optionally \`OPENCODE_MODEL\`). See docs/workflow.md."
 
   # ------------------------------------------------------------------
   # 2. Pull request → structured review comment
@@ -122,18 +102,6 @@ jobs:
       - name: Install OpenCode CLI
         run: npm install -g @opencode/cli@2
 
-      - name: Resolve model availability
-        id: key
-        env:
-          HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
-          HAS_OPENAI: ${{ secrets.OPENAI_API_KEY != '' }}
-        run: |
-          if [ "$HAS_ANTHROPIC" = "true" ] || [ "$HAS_OPENAI" = "true" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Build review inputs
         env:
           PR_NUMBER: ${{ github.event.number }}
@@ -150,9 +118,8 @@ jobs:
           } > .attendx-ai/pr.txt
 
       - name: Review PR (OpenCode)
-        if: steps.key.outputs.available == 'true'
         env:
-          OPENCODE_MODEL: ${{ secrets.OPENCODE_MODEL || 'anthropic/claude-sonnet-4-5' }}
+          # Optional provider keys — only needed for premium (non-free) models
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -177,17 +144,8 @@ jobs:
               --body-file .attendx-ai/review.md
           else
             gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-              --body "⚠️ OpenCode review failed. Check the workflow run logs. Setup: add the ANTHROPIC_API_KEY (or OPENAI_API_KEY) secret and optionally OPENCODE_MODEL."
+              --body "⚠️ OpenCode review failed. Check the workflow run logs (model: \`$OPENCODE_MODEL\`)."
           fi
-
-      - name: Setup hint (no API key configured)
-        if: steps.key.outputs.available == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.number }}
-        run: |
-          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-            --body "🤖 **OpenCode AI review is not configured yet.** Add the \`ANTHROPIC_API_KEY\` (or \`OPENAI_API_KEY\`) repo secret. See docs/workflow.md."
 
   # ------------------------------------------------------------------
   # 3. Weekly security & vulnerability audit → tracking issue report
@@ -210,7 +168,6 @@ jobs:
           cd web
           npm install --no-audit --no-fund 2>&1 | tail -1
           npm audit --json > ../.attendx-ai-npm-audit.json || true
-          echo "### npm audit" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Static analysis (Flutter)
         uses: subosito/flutter-action@v2

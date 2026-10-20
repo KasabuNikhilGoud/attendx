@@ -113,8 +113,9 @@ The **OpenCode AI** workflow (`.github/workflows/opencode.yml`):
 3. [ ] Fill local env files from the committed `.env.example`s
        (`app/.env.test`, `web/.env.local`) — never commit them.
 4. [ ] Repo secrets → `Actions`: `SUPABASE_URL_TEST/_STAGING/_PRODUCTION` +
-       `ANON_KEY_*` (APK builds), and `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`
-       (+ optional `OPENCODE_MODEL`) for the AI workflows.
+       `ANON_KEY_*` (APK builds). The AI workflows need **no key** — they
+       run on a free OpenCode Zen model by default (optionally set
+       `OPENCODE_MODEL` for a premium model).
 5. [ ] Branch protection already on `main`/`staging` (PRs required).
 
 ## Stack
@@ -129,6 +130,7 @@ The **OpenCode AI** workflow (`.github/workflows/opencode.yml`):
 
 ## Docs index
 
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to contribute (PRs go to `develop` only!)
 - [`docs/environments.md`](docs/environments.md) — environments, branches, seeding, CI, go-live
 - [`docs/workflow.md`](docs/workflow.md) — issue → branch → PR → review → promote
 - [`docs/ai-native-erp.md`](docs/ai-native-erp.md) — product vision
