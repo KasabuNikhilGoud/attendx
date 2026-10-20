@@ -43,3 +43,24 @@ jobs:
 
       - name: flutter test
         run: flutter test
+
+  web-build:
+    name: next build (web)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: npm install
+        run: npm install
+      - name: npm audit (non-blocking)
+        run: npm audit
+        continue-on-error: true
+      - name: next build
+        run: npm run build

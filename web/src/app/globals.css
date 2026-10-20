@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/*
+ * AttendX brand tokens (Tailwind v4 — theme via CSS variables).
+ * Mirrors the Flutter app: AppColors.primaryRed = #E53935, ink = #18181B.
+ */
+@theme {
+  --color-brand: #e53935;
+  --color-brand-dark: #c62828;
+  --color-brand-soft: #fef2f2;
+  --color-ink: #18181b;
+  --shadow-card: 0 1px 2px rgba(24, 24, 27, 0.06), 0 8px 24px rgba(24, 24, 27, 0.06);
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #fafafa;
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}

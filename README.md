@@ -49,7 +49,12 @@ attendx/
 # 1. Supabase: create a project → SQL Editor → run supabase/schema.sql
 #    (3 projects for test / staging / production — see docs/environments.md)
 
-# 2. App
+# 2. Web (easiest to test — works with zero config in demo mode)
+cd web
+npm install
+npm run dev            # http://localhost:3000
+
+# 3. App
 cd app
 flutter pub get
 flutter run --dart-define-from-file=.env.test
