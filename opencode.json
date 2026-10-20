@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // AttendX project config for OpenCode (V2).
+  // Agents live in .opencode/agents/ (issue-triage, pr-reviewer).
+  // In CI the workflow passes the model explicitly via `opencode run --model`.
+  // Locally: run `opencode` as usual — omit nothing, everything auto-discovers.
+  "model": "{env:OPENCODE_MODEL}",
+  "instructions": ["AGENTS.md", "docs/environments.md"],
+  "permissions": [
+    // Respectful defaults for local sessions: pushing and destructive shell
+    // always ask first. Local file edits stay allowed.
+    { "action": "shell", "resource": "git push*", "effect": "ask" },
+    { "action": "shell", "resource": "git reset --hard*", "effect": "ask" },
+    { "action": "shell", "resource": "* rm -rf *", "effect": "ask" }
+  ],
+  "watcher": {
+    "ignore": ["app/build/**", "web/node_modules/**", "web/.next/**", ".next/**"]
+  }
+}

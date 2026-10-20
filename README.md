@@ -75,3 +75,11 @@ on the **test** project.
 Full runbook: [`docs/environments.md`](docs/environments.md) — includes
 CI/CD (GitHub Actions) build-per-environment and the promotion flow
 `develop → staging → tag → main`.
+
+## Issue-driven workflow + AI review
+
+Every change starts as a GitHub issue (✨ feature / 🐞 bug / 🔐 security
+template) → `feat/*` branch → PR into `develop` → promote to `staging`/`main`.
+OpenCode AI (`opencode.yml`) analyzes new issues, reviews every PR with
+structured findings and runs a weekly security audit. Full guide:
+[`docs/workflow.md`](docs/workflow.md).

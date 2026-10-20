@@ -1,0 +1,59 @@
+name: "✨ Feature request"
+description: "Propose a new feature or improvement — this becomes the work plan"
+title: "feat: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: "Feature summary"
+      description: "One or two sentences: what should exist when this is done?"
+      placeholder: "Add a rolling 30-day attendance percentage to the student dashboard so students see their recent trend, not just all-time."
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: "What exactly to build"
+      description: "Concrete behaviour, UI elements, data requirements. Bullet points."
+      placeholder: |
+        - New "Last 30 days" stat card on the student dashboard
+        - Per-subject 30-day % next to the all-time %
+        - Show delta (↑/↓) vs all-time percentage
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Where does it live?"
+      options:
+        - "web (Next.js dashboard)"
+        - "app (Flutter mobile)"
+        - "both web + app"
+        - "supabase (schema/seed/functions)"
+    validations:
+      required: true
+  - type: checkboxes
+    id: environments
+    attributes:
+      label: "Environment plan (how it ships)"
+      description: "Every feature must be verifiable in test/demo before it can reach production."
+      options:
+        - label: "Works in web demo mode (fake data in src/lib/demo.ts updated)"
+        - label: "Test DB: seed_test.sql covers the data this needs"
+        - label: "No new data is seeded into staging/prod"
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Acceptance criteria"
+      description: "Checkable bullets the PR will be measured against."
+      placeholder: |
+        - [ ] Student sees 30-day % per subject and overall
+        - [ ] Values match between demo mode and live Supabase mode
+    validations:
+      required: true
+  - type: textarea
+    id: extras
+    attributes:
+      label: "Notes / links"
+      description: "Screenshots, references, related issues (optional)."
